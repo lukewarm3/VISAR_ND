@@ -843,6 +843,7 @@ export default function ToolbarPlugin() {
               <i className="format sync" />
             </button>
             <button
+              id="save"
               className="toolbar-item"
               aria-label="Save Draft"
               onClick={() => {

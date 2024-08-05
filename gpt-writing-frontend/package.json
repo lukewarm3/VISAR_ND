@@ -19,6 +19,8 @@
     "@ungap/structured-clone": "^1.0.2",
     "draftjs-to-html": "^0.9.1",
     "immutable": "^4.1.0",
+    "intro.js": "^8.0.0-beta.1",
+    "intro.js-react": "^1.0.0",
     "lexical": "^0.7.5",
     "mdb-react-ui-kit": "^6.3.0",
     "mongodb": "^5.9.0",

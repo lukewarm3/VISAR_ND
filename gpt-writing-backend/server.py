@@ -23,12 +23,10 @@ with open('mongoDB_key.json') as key_file:
     mongoDB_key = json.load(key_file)['key']
 
 # Update your mongoDB key here. You need to create a new mongoDB database called "gptwriting", and create collections called "users" and "interactionData" in the database.
-try:
-    client = MongoClient(mongoDB_key)
-    db = client.gptwriting
-    print("Successfully connect to mongoDB")
-except:
-    print("fail to connect to mongoDB")
+
+client = MongoClient(mongoDB_key)
+db = client.gptwriting
+
 
 
 

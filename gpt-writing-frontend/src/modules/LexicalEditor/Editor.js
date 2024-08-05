@@ -1,45 +1,52 @@
-import ExampleTheme from './themes/ExampleTheme'
-import { LexicalComposer } from '@lexical/react/LexicalComposer'
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
-import { ContentEditable } from '@lexical/react/LexicalContentEditable'
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
-import { NodeEventPlugin } from '@lexical/react/LexicalNodeEventPlugin'
-import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin'
-import TreeViewPlugin from './plugins/TreeViewPlugin'
-import ToolbarPlugin from './plugins/ToolbarPlugin'
-import EditablePlugin from './plugins/ToggleEditablePlugin'
-import { HeadingNode, QuoteNode } from '@lexical/rich-text'
-import { TableCellNode, TableNode, TableRowNode } from '@lexical/table'
+import ExampleTheme from "./themes/ExampleTheme";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { NodeEventPlugin } from "@lexical/react/LexicalNodeEventPlugin";
+import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
+import TreeViewPlugin from "./plugins/TreeViewPlugin";
+import ToolbarPlugin from "./plugins/ToolbarPlugin";
+import EditablePlugin from "./plugins/ToggleEditablePlugin";
+import { HeadingNode, QuoteNode } from "@lexical/rich-text";
+import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import {
   addClassNamesToElement,
-  removeClassNamesFromElement
-} from '@lexical/utils'
-import { ListItemNode, ListNode } from '@lexical/list'
-import { CodeHighlightNode, CodeNode } from '@lexical/code'
-import { AutoLinkNode, LinkNode } from '@lexical/link'
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin'
-import { ListPlugin } from '@lexical/react/LexicalListPlugin'
-import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin'
-import { TRANSFORMERS } from '@lexical/markdown'
-import FloatingButtonPlugin from './plugins/FloatingButtonPlugin'
-import ListMaxIndentLevelPlugin from './plugins/ListMaxIndentLevelPlugin'
-import CodeHighlightPlugin from './plugins/CodeHighlightPlugin'
-import MuiAppBar from '@mui/material/AppBar'
-import Drawer from '@mui/material/Drawer'
-import AutoLinkPlugin from './plugins/AutoLinkPlugin'
-import './styles.css'
-import { styled, useTheme } from '@mui/material/styles'
-import { $getSelection, ParagraphNode, TextNode, $getNodeByKey, RootNode, LineBreakNode } from 'lexical'
-import LoadingPlugin from './plugins/LoadingPlugin'
-import { HighlightDepNode } from './nodes/HighlightDepNode'
-import ReactFlowModal from './widgets/ReactFlowModal'
-import SaveModal from './widgets/SaveModal'
-import { useSelector, useDispatch } from 'react-redux'
-import Box from '@mui/material/Box'
-import { useLocation } from 'react-router-dom'
-import ReactFlowPlugin from './plugins/ReactFLowPlugin'
-import { TextBlockNode } from './nodes/TextBlockNode'
-import { Typography } from '@mui/material'
+  removeClassNamesFromElement,
+} from "@lexical/utils";
+import { ListItemNode, ListNode } from "@lexical/list";
+import { CodeHighlightNode, CodeNode } from "@lexical/code";
+import { AutoLinkNode, LinkNode } from "@lexical/link";
+import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
+import { TRANSFORMERS } from "@lexical/markdown";
+import FloatingButtonPlugin from "./plugins/FloatingButtonPlugin";
+import ListMaxIndentLevelPlugin from "./plugins/ListMaxIndentLevelPlugin";
+import CodeHighlightPlugin from "./plugins/CodeHighlightPlugin";
+import MuiAppBar from "@mui/material/AppBar";
+import Drawer from "@mui/material/Drawer";
+import AutoLinkPlugin from "./plugins/AutoLinkPlugin";
+import "./styles.css";
+import { styled, useTheme } from "@mui/material/styles";
+import {
+  $getSelection,
+  ParagraphNode,
+  TextNode,
+  $getNodeByKey,
+  RootNode,
+  LineBreakNode,
+} from "lexical";
+import LoadingPlugin from "./plugins/LoadingPlugin";
+import { HighlightDepNode } from "./nodes/HighlightDepNode";
+import ReactFlowModal from "./widgets/ReactFlowModal";
+import SaveModal from "./widgets/SaveModal";
+import { useSelector, useDispatch } from "react-redux";
+import Box from "@mui/material/Box";
+import { useLocation } from "react-router-dom";
+import ReactFlowPlugin from "./plugins/ReactFLowPlugin";
+import { TextBlockNode } from "./nodes/TextBlockNode";
+import { Typography } from "@mui/material";
 import {
   setCurClickedNodeKey,
   setCurSelectedNodeKey,
@@ -48,81 +55,84 @@ import {
   setUsername,
   setSessionId,
   setTaskDescription,
-  setEditorSliceStates
-} from './slices/EditorSlice'
-import { setFlowSliceStates, setNodeSelected } from './slices/FlowSlice'
-import SeeAlternativeModal from './widgets/SeeAlternativeModal'
-import FixWeaknessModal from './widgets/FixWeaknessModal'
-import { ADD_EXAMPLE_COMMAND } from './commands/SelfDefinedCommands'
-import RefineModal from './widgets/RefineModal'
-import ReactFlow, { useReactFlow, ReactFlowProvider } from 'reactflow'
-import UpdateModal from './widgets/UpdateModal'
-import { useEffect, useState } from 'react'
-import ManualAddNodeModal from './widgets/ManualAddNodeModal'
-import TaskDescriptionPlugin from './plugins/TaskDescriptionPlugin'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import LoadEditorStatePlugin from './plugins/LoadEditorStatePlugin'
+  setEditorSliceStates,
+} from "./slices/EditorSlice";
+import { setFlowSliceStates, setNodeSelected } from "./slices/FlowSlice";
+import SeeAlternativeModal from "./widgets/SeeAlternativeModal";
+import FixWeaknessModal from "./widgets/FixWeaknessModal";
+import { ADD_EXAMPLE_COMMAND } from "./commands/SelfDefinedCommands";
+import RefineModal from "./widgets/RefineModal";
+import ReactFlow, { useReactFlow, ReactFlowProvider } from "reactflow";
+import UpdateModal from "./widgets/UpdateModal";
+import { useEffect, useState } from "react";
+import ManualAddNodeModal from "./widgets/ManualAddNodeModal";
+import TaskDescriptionPlugin from "./plugins/TaskDescriptionPlugin";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import LoadEditorStatePlugin from "./plugins/LoadEditorStatePlugin";
+import { Steps } from "intro.js-react";
+import "intro.js/introjs.css";
+import { disableSteps, enableSteps } from "./slices/IntroSlice";
 
-function Placeholder () {
-  return <div className='editor-placeholder'>Enter some rich text...</div>
+function Placeholder() {
+  return <div className="editor-placeholder">Enter some rich text...</div>;
 }
 
-const drawerWidth = '50%'
+const drawerWidth = "50%";
 
-const Main = styled('main', { shouldForwardProp: prop => prop !== 'open' })(
+const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open }) => ({
     flexGrow: 1,
     // padding: theme.spacing(3),
-    transition: theme.transitions.create('margin', {
+    transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
+      duration: theme.transitions.duration.leavingScreen,
     }),
-    marginTop: '46px',
+    marginTop: "46px",
     // marginRight: -drawerWidth,
     ...(open && {
-      transition: theme.transitions.create('margin', {
+      transition: theme.transitions.create("margin", {
         easing: theme.transitions.easing.easeOut,
-        duration: theme.transitions.duration.enteringScreen
+        duration: theme.transitions.duration.enteringScreen,
       }),
-      marginRight: drawerWidth
-    })
+      marginRight: drawerWidth,
+    }),
   })
-)
+);
 
 const AppBar = styled(MuiAppBar, {
-  shouldForwardProp: prop => prop !== 'open'
+  shouldForwardProp: (prop) => prop !== "open",
 })(({ theme, open }) => ({
-  transition: theme.transitions.create(['margin', 'width'], {
+  transition: theme.transitions.create(["margin", "width"], {
     easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.leavingScreen
+    duration: theme.transitions.duration.leavingScreen,
   }),
-  height: '46px',
-  backgroundColor: '#fff',
+  height: "46px",
+  backgroundColor: "#fff",
   ...(open && {
     width: `calc(100% - ${drawerWidth})`,
     marginRight: `${drawerWidth}`,
-    transition: theme.transitions.create(['margin', 'width'], {
+    transition: theme.transitions.create(["margin", "width"], {
       easing: theme.transitions.easing.easeOut,
-      duration: theme.transitions.duration.enteringScreen
-    })
-  })
-}))
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  }),
+}));
 
-const DrawerHeader = styled('div')(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
+const DrawerHeader = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
   padding: theme.spacing(0, 1),
   // necessary for content to be below app bar
   ...theme.mixins.toolbar,
-  justifyContent: 'flex-start'
-}))
+  justifyContent: "flex-start",
+}));
 
 const editorConfig = {
   // The editor theme
   theme: ExampleTheme,
   // Handling of errors during update
-  onError (error) {
-    throw error
+  onError(error) {
+    throw error;
   },
   // Any custom nodes go here
   nodes: [
@@ -138,56 +148,83 @@ const editorConfig = {
     TableRowNode,
     AutoLinkNode,
     LinkNode,
-    TextBlockNode
-  ]
-}
+    TextBlockNode,
+  ],
+};
 
-export default function Editor () {
-  const dispatch = useDispatch()
-  const location = useLocation()
-  const mindmapOpen = useSelector(state => state.editor.mindmapOpen)
+export default function Editor() {
+  const dispatch = useDispatch();
+  const location = useLocation();
+  const mindmapOpen = useSelector((state) => state.editor.mindmapOpen);
   const curSelectedNodeKey = useSelector(
-    state => state.editor.curSelectedNodeKey
-  )
-  const isCurNodeEditable = useSelector(state => state.editor.isCurNodeEditable)
-  const condition = useSelector(state => state.editor.condition)
-  const [editorState, setEditorState] = useState(null)
+    (state) => state.editor.curSelectedNodeKey
+  );
+  const isCurNodeEditable = useSelector(
+    (state) => state.editor.isCurNodeEditable
+  );
+  const condition = useSelector((state) => state.editor.condition);
+  const [editorState, setEditorState] = useState(null);
+  const stepsEnabled = useSelector((state) => state.intro.stepsEnabled);
+  const currentStep = useSelector((state) => state.intro.currentStep);
+  const steps = useSelector((state) => state.intro.steps);
 
   useEffect(() => {
-    console.log('set condition', location.state.condition)
+    console.log("set condition", location.state.condition);
     if (
       location.state.condition !== null &&
       location.state.condition !== undefined
     ) {
-      dispatch(setStudyCondition(location.state.condition))
-      dispatch(setUsername(location.state.username))
-      dispatch(setSessionId(location.state.sessionId))
-      dispatch(setTaskDescription(location.state.taskDescription))
+      dispatch(setStudyCondition(location.state.condition));
+      dispatch(setUsername(location.state.username));
+      dispatch(setSessionId(location.state.sessionId));
+      dispatch(setTaskDescription(location.state.taskDescription));
       if (location.state.preload === true) {
-        console.log("[editor] editor state is", location.state.editorState)
-        console.log("[editor] editor slice is", location.state.editorSlice)
-        console.log("[editor] flow slice is", location.state.flowSlice)
-        dispatch(setEditorSliceStates(location.state.editorSlice))
-        dispatch(setFlowSliceStates(location.state.flowSlice))
-        setEditorState(location.state.editorState)
+        console.log("[editor] editor state is", location.state.editorState);
+        console.log("[editor] editor slice is", location.state.editorSlice);
+        console.log("[editor] flow slice is", location.state.flowSlice);
+        dispatch(setEditorSliceStates(location.state.editorSlice));
+        dispatch(setFlowSliceStates(location.state.flowSlice));
+        setEditorState(location.state.editorState);
       }
     }
-  }, [location])
+  }, [location]);
+
+  // useEffect(() => {
+  //   // Ensure all elements exist in the DOM before enabling the steps
+  //   if (document.querySelector(".toolbar")) {
+  //     console.log("enable intro.js!")
+  //     dispatch(enableSteps())
+  //   }
+  // }, []);
 
   return (
     <Box>
+      <Steps
+        enabled={stepsEnabled}
+        steps={steps}
+        initialStep={currentStep}
+        onBeforeChange={(nextStepIndex) => {
+          console.log("Changing to step:", nextStepIndex);
+        }}
+        onExit={() => dispatch(disableSteps())}
+      />
       <LexicalComposer initialConfig={editorConfig}>
-        <AppBar position='fixed' open={mindmapOpen}>
+        <AppBar position="fixed" open={mindmapOpen}>
           <ToolbarPlugin />
         </AppBar>
         <Main open={mindmapOpen}>
-          <div className='editor-container'>
-            <LoadEditorStatePlugin editorState={editorState}/>
+          <div className="editor-container">
+            <LoadEditorStatePlugin editorState={editorState} />
             <FloatingButtonPlugin />
             <LoadingPlugin />
-            <div className='editor-inner'>
+            <div className="editor-inner">
               <RichTextPlugin
-                contentEditable={<ContentEditable className='editor-input' style={{height: "988px"}} />}
+                contentEditable={
+                  <ContentEditable
+                    className="editor-input"
+                    style={{ height: "988px" }}
+                  />
+                }
                 placeholder={<Placeholder />}
               />
               <HistoryPlugin />
@@ -200,84 +237,96 @@ export default function Editor () {
               {/* <EditablePlugin /> */}
               <LinkPlugin />
               <AutoLinkPlugin />
-              <NodeEventPlugin 
+              <NodeEventPlugin
                 nodeType={LineBreakNode}
-                eventType={'click'}
+                eventType={"click"}
                 eventListener={(e, editor, key) => {
-                  console.log('line break clicked')
-                  editor.setEditable(true)
-                  const selection = $getSelection()
-                  const child = selection.getNodes()[0]
-                  dispatch(setCurClickedNodeKey(child.__key))
+                  console.log("line break clicked");
+                  editor.setEditable(true);
+                  const selection = $getSelection();
+                  const child = selection.getNodes()[0];
+                  dispatch(setCurClickedNodeKey(child.__key));
                 }}
               />
               <NodeEventPlugin
                 nodeType={TextNode}
-                eventType={'click'}
+                eventType={"click"}
                 eventListener={(e, editor, key) => {
                   editor.update(() => {
-                    console.log('NodeEventPlugin TextNode triggered for node key:', key);
+                    console.log(
+                      "NodeEventPlugin TextNode triggered for node key:",
+                      key
+                    );
 
-                    const selection = $getSelection()
-                    const child = selection.getNodes()[0]
-                    console.log('text node clicked', child.__key)
+                    const selection = $getSelection();
+                    const child = selection.getNodes()[0];
+                    console.log("text node clicked", child.__key);
                     // curClickedNodeKey is used to navigate the focus of the react flow to the corresponding node
-                    dispatch(setCurClickedNodeKey(child.__key))
+                    dispatch(setCurClickedNodeKey(child.__key));
                     // dispatch(setCurClickedNodeKey(''))
-                    editor.setEditable(true)
-                    editor.focus()
-                  })
-                  e.stopPropagation()
+                    editor.setEditable(true);
+                    editor.focus();
+                  });
+                  e.stopPropagation();
                 }}
               />
               <NodeEventPlugin
                 nodeType={TextBlockNode}
-                eventType={'click'}
+                eventType={"click"}
                 eventListener={(e, editor, key) => {
                   // console.log('flow viewport', flowInstance.getViewport())
 
                   editor.update(() => {
-                    console.log('NodeEventPlugin textblocknode triggered for node key:', key);
+                    console.log(
+                      "NodeEventPlugin textblocknode triggered for node key:",
+                      key
+                    );
 
-                    if ($getNodeByKey(key) === null || $getNodeByKey(key) === undefined) {
-                      console.log("[editor] the event key is null")
-                      return
+                    if (
+                      $getNodeByKey(key) === null ||
+                      $getNodeByKey(key) === undefined
+                    ) {
+                      console.log("[editor] the event key is null");
+                      return;
                     }
 
-                    const selection = $getSelection()
-                    const child = selection.getNodes()[0]
-                    console.log("[editor] selection's first node (child): ", child)
-                    dispatch(setCurClickedNodeKey(child.__key))
+                    const selection = $getSelection();
+                    const child = selection.getNodes()[0];
+                    console.log(
+                      "[editor] selection's first node (child): ",
+                      child
+                    );
+                    dispatch(setCurClickedNodeKey(child.__key));
                     // console.log("[event listener] curSelectedNodeKey, node key, isCurNodeEditable: ", curSelectedNodeKey, child.__key, isCurNodeEditable)
                     if (
                       child.__key === curSelectedNodeKey &&
                       isCurNodeEditable
                     ) {
                       // console.log("This is the the node selected in last time")
-                      editor.setEditable(true)
-                      editor.focus()
+                      editor.setEditable(true);
+                      editor.focus();
                     } else {
                       // restore the default background transprancy for the last selected node
                       if (curSelectedNodeKey !== child.__key) {
                         // dispatch(setCurSelectedNodeKey(child.__key))
-                        dispatch(setNodeSelected(child.__key)) // when click the HighlightNode, the HighlightNode will be wrapped by dashed green line
+                        dispatch(setNodeSelected(child.__key)); // when click the HighlightNode, the HighlightNode will be wrapped by dashed green line
                         const lastSelectedNode =
-                          $getNodeByKey(curSelectedNodeKey)
+                          $getNodeByKey(curSelectedNodeKey);
                         if (
                           lastSelectedNode !== null &&
                           lastSelectedNode !== undefined
                         ) {
                           lastSelectedNode.setStyle(
-                            'background-color: #f9c74f;'
-                          )
+                            "background-color: #f9c74f;"
+                          );
                         }
                       }
-                      console.log('gonna disable editable')
-                      editor.setEditable(false)
-                      dispatch(setIsCurNodeEditable(false))
+                      console.log("gonna disable editable");
+                      editor.setEditable(false);
+                      dispatch(setIsCurNodeEditable(false));
                     }
-                  })
-                  e.stopPropagation()
+                  });
+                  e.stopPropagation();
                 }}
               />
               <ListMaxIndentLevelPlugin maxDepth={7} />
@@ -290,12 +339,12 @@ export default function Editor () {
             sx={{
               width: drawerWidth,
               flexShrink: 0,
-              '& .MuiDrawer-paper': {
-                width: drawerWidth
-              }
+              "& .MuiDrawer-paper": {
+                width: drawerWidth,
+              },
             }}
-            variant='persistent'
-            anchor='right'
+            variant="persistent"
+            anchor="right"
             open={mindmapOpen}
           >
             <Typography>Very good!</Typography>
@@ -311,5 +360,5 @@ export default function Editor () {
         <SaveModal />
       </LexicalComposer>
     </Box>
-  )
+  );
 }
