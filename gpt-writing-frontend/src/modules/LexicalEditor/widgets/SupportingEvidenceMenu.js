@@ -321,6 +321,7 @@ export default function SupportingEvidenceMenu ({ editor }) {
                   mb: 2
                 }}
                 onClick={handleReviewClick}
+                disabled={selectedSupportingArguments.length === 0}
               >
                 Review and sketch
               </Button>

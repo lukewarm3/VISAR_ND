@@ -61,6 +61,7 @@ import ArrowCircleRightIcon from '@mui/icons-material/ArrowCircleRight'
 import { $createHighlightDepNode } from '../nodes/HighlightDepNode'
 import { $createTextBlockNode } from '../nodes/TextBlockNode'
 import { colorMapping } from '../utils'
+import { setCurrentStep } from '../slices/IntroSlice'
 
 
 const updateStyle = {
@@ -122,6 +123,12 @@ export default function UpdateModal () {
   const flowEditorNodeMapping = useSelector(
     state => state.flow.flowEditorNodeMapping
   )
+
+  // tutorial
+  const firstTimeUser = useSelector((state) => state.intro.firstTimeUser);
+  const introInstance = useSelector((state) => state.intro.introInstance);
+  const steps = useSelector((state) => state.intro.steps);
+  const currentStep = useSelector((state) => state.intro.currentStep);
 
   const edgeTypeMappings = {
     featuredBy:
@@ -265,6 +272,15 @@ export default function UpdateModal () {
             setChips(prompt)
             setOptionLoading(false)
             setShowGeneration(false)
+          }
+
+          if (firstTimeUser && introInstance && currentStep === 4) {
+            introInstance.setOptions({
+              disableInteraction: true,
+              steps: steps.slice(19, 20),
+            });
+      
+            introInstance.start();
           }
         })
     }
@@ -426,6 +442,25 @@ export default function UpdateModal () {
           if (isInitNode) {
             setShowGeneration(true)
           }
+          if (firstTimeUser && introInstance) {
+            if (currentStep === 3) {
+              dispatch(setCurrentStep(4))
+              introInstance.setOptions({
+                disableInteraction: true,
+                steps: steps.slice(17, 19),
+              });
+        
+              introInstance.start();
+            } else if (currentStep === 4) {
+              dispatch(setCurrentStep(5))
+              introInstance.setOptions({
+                disableInteraction: true,
+                steps: steps.slice(20, 21),
+              });
+        
+              introInstance.start();
+            } 
+          }
         })
     }
   }
@@ -512,6 +547,7 @@ export default function UpdateModal () {
                 {optionLoading && <CircularProgress />}
                 {!isInitNode && !optionLoading && (
                   <Stack
+                    id="option-chips"
                     spacing={1}
                     style={{ maxHeight: 200, overflowY: 'auto' }}
                   >
@@ -566,7 +602,9 @@ export default function UpdateModal () {
                         )
                         implementNode(curNodeKey, selectedChip)
                         setShowGeneration(true)
+                        
                       }}
+                      disabled={selectedChip === ''}
                     >
                       Generate text
                     </Button>
@@ -580,7 +618,7 @@ export default function UpdateModal () {
 
                 {loading && <CircularProgress />}
                 {!loading && showGeneration && (
-                  <Box sx={{ mt: 2, mb: 2 }}>
+                  <Box id="regenerate-replace-wrapper" sx={{ mt: 2, mb: 2 }}>
                     <Box sx={{ maxHeight: 100, overflowY: 'auto'}}>
                       <Typography
                         sx={{
@@ -684,7 +722,7 @@ export default function UpdateModal () {
                   </Box>
                 )}
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Box id="prev-next-wrapper" sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                 <Typography sx={{ mt: 1 }}>Prev dependent</Typography>
                 <IconButton
                   sx={{ mr: 10 }}

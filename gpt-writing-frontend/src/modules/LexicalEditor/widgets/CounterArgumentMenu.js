@@ -1,33 +1,33 @@
-import { mergeRegister } from '@lexical/utils'
+import { mergeRegister } from "@lexical/utils";
 import {
   lowPriority,
-  SHOW_COUNTER_ARGUMENT_COMMAND
-} from '../commands/SelfDefinedCommands'
+  SHOW_COUNTER_ARGUMENT_COMMAND,
+} from "../commands/SelfDefinedCommands";
 import {
   useCallback,
   useEffect,
   forwardRef,
   useMemo,
   useRef,
-  useState
-} from 'react'
+  useState,
+} from "react";
 import {
   SELECTION_CHANGE_COMMAND,
   $getSelection,
   $isRangeSelection,
   $getNodeByKey,
   $isParagraphNode,
-  $createTextNode
-} from 'lexical'
-import Paper from '@mui/material/Paper'
-import Box from '@mui/material/Box'
-import TextField from '@mui/material/TextField'
-import Skeleton from '@mui/material/Skeleton'
-import CircularProgress from '@mui/material/CircularProgress'
-import Select from '@mui/material/Select'
-import Chip from '@mui/material/Chip'
-import Stack from '@mui/material/Stack'
-import Snackbar from '@mui/material/Snackbar'
+  $createTextNode,
+} from "lexical";
+import Paper from "@mui/material/Paper";
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import Skeleton from "@mui/material/Skeleton";
+import CircularProgress from "@mui/material/CircularProgress";
+import Select from "@mui/material/Select";
+import Chip from "@mui/material/Chip";
+import Stack from "@mui/material/Stack";
+import Snackbar from "@mui/material/Snackbar";
 import {
   Button,
   Grid,
@@ -36,14 +36,18 @@ import {
   Tabs,
   Tab,
   Tooltip,
-  Typography
-} from '@mui/material'
-import { positionFloatingButton } from '../utils'
-import MuiAlert from '@mui/material/Alert'
-import { SHOW_LOADING_COMMAND } from '../commands/SelfDefinedCommands'
-import { Container } from '@mui/system'
-import { useSelector, useDispatch } from 'react-redux'
-import { loadNodes, setSelectedPrompts, insertNewGeneratedNodes } from '../slices/FlowSlice'
+  Typography,
+} from "@mui/material";
+import { positionFloatingButton } from "../utils";
+import MuiAlert from "@mui/material/Alert";
+import { SHOW_LOADING_COMMAND } from "../commands/SelfDefinedCommands";
+import { Container } from "@mui/system";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  loadNodes,
+  setSelectedPrompts,
+  insertNewGeneratedNodes,
+} from "../slices/FlowSlice";
 import {
   setWeaknessTypes,
   handleSelectedCAChanged,
@@ -53,161 +57,176 @@ import {
   toggleWeaknessTypes,
   setFlowModalOpen,
   resetCounterArguments,
-} from '../slices/EditorSlice'
+} from "../slices/EditorSlice";
+import { setCurrentStep } from "../slices/IntroSlice";
 
-const Alert = forwardRef(function Alert (props, ref) {
-  return <MuiAlert elevation={6} ref={ref} variant='filled' {...props} />
-})
+const Alert = forwardRef(function Alert(props, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
-export default function CounterArgumentMenu ({ editor }) {
-  const groupRef = useRef(null)
-  const dispatch = useDispatch()
-  const weaknessTypes = useSelector(state => state.editor.weaknessTypes)
+export default function CounterArgumentMenu({ editor }) {
+  const groupRef = useRef(null);
+  const dispatch = useDispatch();
+  const weaknessTypes = useSelector((state) => state.editor.weaknessTypes);
   const selectedCounterArguments = useSelector(
-    state => state.editor.selectedCounterArguments
-  )
-  const [showPanel, setShowPanel] = useState(false)
-  const itemPerPage = 5
-  const [tabValue, setTabValue] = useState(0)
-  const counterArguments = useSelector(state => state.editor.counterArguments)
-  const [page, setPage] = useState(1)
-  const [isFectching, setIsFetching] = useState(false)
-  const promptStatus = useSelector(state => state.editor.promptStatus)
+    (state) => state.editor.selectedCounterArguments
+  );
+  const [showPanel, setShowPanel] = useState(false);
+  const itemPerPage = 5;
+  const [tabValue, setTabValue] = useState(0);
+  const counterArguments = useSelector(
+    (state) => state.editor.counterArguments
+  );
+  const [page, setPage] = useState(1);
+  const [isFectching, setIsFetching] = useState(false);
+  const promptStatus = useSelector((state) => state.editor.promptStatus);
   const curSelectedNodeKey = useSelector(
-    state => state.editor.curSelectedNodeKey
-  )
+    (state) => state.editor.curSelectedNodeKey
+  );
   const selectedWeaknesses = useSelector(
-    state => state.editor.selectedWeaknesses
-  )
-  const [fetchingAlertOpen, setFetchingAlertOpen] = useState(false)
-  const depGraph = useSelector(state => state.flow.dependencyGraph)
-  const nodeMappings = useSelector(state => state.flow.flowEditorNodeMapping)
+    (state) => state.editor.selectedWeaknesses
+  );
+  const [fetchingAlertOpen, setFetchingAlertOpen] = useState(false);
+  const depGraph = useSelector((state) => state.flow.dependencyGraph);
+  const nodeMappings = useSelector((state) => state.flow.flowEditorNodeMapping);
+  const firstTimeUser = useSelector((state) => state.intro.firstTimeUser);
+  const introInstance = useSelector((state) => state.intro.introInstance);
+  const steps = useSelector((state) => state.intro.steps);
 
   const updateFloatingGroup = useCallback(() => {
-    const selection = $getSelection()
-    const buttonElem = groupRef.current
-    const nativeSelection = window.getSelection()
+    const selection = $getSelection();
+    const buttonElem = groupRef.current;
+    const nativeSelection = window.getSelection();
 
     if (buttonElem === null) {
-      return
+      return;
     }
 
-    const rootElement = editor.getRootElement()
-    const domRange = nativeSelection.rangeCount > 0 ? nativeSelection.getRangeAt(0) : null
+    const rootElement = editor.getRootElement();
+    const domRange =
+      nativeSelection.rangeCount > 0 ? nativeSelection.getRangeAt(0) : null;
 
     const condition =
       selection != null &&
       rootElement != null &&
       rootElement.contains(nativeSelection.anchorNode) &&
-      showPanel && domRange
+      showPanel &&
+      domRange;
 
     if (condition) {
-      let rect
+      let rect;
       if (nativeSelection.anchorNode === rootElement) {
-        let inner = rootElement
+        let inner = rootElement;
         while (inner.firstElementChild != null) {
-          inner = inner.firstElementChild
+          inner = inner.firstElementChild;
         }
-        rect = inner.getBoundingClientReact()
+        rect = inner.getBoundingClientReact();
       } else {
-        rect = domRange.getBoundingClientRect()
+        rect = domRange.getBoundingClientRect();
       }
 
-      positionFloatingButton(buttonElem, rect)
+      positionFloatingButton(buttonElem, rect);
     } else {
       // console.log(`[updateFloatingGroup]: element is inactive, isElaborate: ${isElaborate}`)
-      positionFloatingButton(buttonElem, null)
+      positionFloatingButton(buttonElem, null);
     }
 
-    return true
-  })
+    return true;
+  });
 
   const fetchCounterArguments = useCallback(() => {
-    setIsFetching(true)
-    setFetchingAlertOpen(true)
+    setIsFetching(true);
+    setFetchingAlertOpen(true);
 
     editor.update(() => {
-
-      let nodeKey = null
-      if (curSelectedNodeKey === '') {
-        const selection = $getSelection()
-        nodeKey = selection.getNodes()[0].__key
+      let nodeKey = null;
+      if (curSelectedNodeKey === "") {
+        const selection = $getSelection();
+        nodeKey = selection.getNodes()[0].__key;
       } else {
-        nodeKey = curSelectedNodeKey
+        nodeKey = curSelectedNodeKey;
       }
 
-      const node = $getNodeByKey(nodeKey)
-      let selected_text = ''
+      const node = $getNodeByKey(nodeKey);
+      let selected_text = "";
       if (node === null) {
-        const selection = $getSelection()
-        selected_text = selection.getNodes()[0].getTextContent()
+        const selection = $getSelection();
+        selected_text = selection.getNodes()[0].getTextContent();
       } else {
-        selected_text = node.getTextContent()
+        selected_text = node.getTextContent();
       }
 
-      let flowKey = null
+      let flowKey = null;
 
-      console.log("nodeMappings: ", nodeMappings)
+      console.log("nodeMappings: ", nodeMappings);
 
       for (const [key, value] of Object.entries(nodeMappings)) {
-        console.log(`key: ${key}, value: ${value}`)
+        console.log(`key: ${key}, value: ${value}`);
         if (value === nodeKey) {
-          flowKey = key
-          break
+          flowKey = key;
+          break;
         }
       }
 
       if (flowKey === null) {
-        console.log("curSelectedNodeKey: ", nodeKey)
-        console.log("flowKey: ", flowKey)
+        console.log("curSelectedNodeKey: ", nodeKey);
+        console.log("flowKey: ", flowKey);
       }
 
-      let keyword
-      while(depGraph[flowKey]["type"] !== "featuredBy") {
-        flowKey = depGraph[flowKey]["parent"] 
+      let keyword;
+      while (depGraph[flowKey]["type"] !== "featuredBy") {
+        flowKey = depGraph[flowKey]["parent"];
       }
 
-      keyword = depGraph[flowKey]["prompt"] // the keyword needs to be the type of "featuredBy"
+      keyword = depGraph[flowKey]["prompt"]; // the keyword needs to be the type of "featuredBy"
 
       // IP: https://visar.app:8088
-      fetch('http://visar.app/api/counterArguments', {
-        method: 'POST',
-        mode: 'cors',
+      fetch("http://127.0.0.1:5000/counterArguments", {
+        method: "POST",
+        mode: "cors",
         headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
         },
         body: JSON.stringify({
           context: selected_text,
-          keyword: keyword
-        })
+          keyword: keyword,
+        }),
       })
-        .then(response => response.json())
-        .then(response => {
-          dispatch(setCounterArguments(response['response']))
-          setIsFetching(false)
-          setPage(1)
-        })
-    })
-  }, [curSelectedNodeKey, nodeMappings])
+        .then((response) => response.json())
+        .then((response) => {
+          dispatch(setCounterArguments(response["response"]));
+          setIsFetching(false);
+          setPage(1);
+          if (firstTimeUser && introInstance) {
+            introInstance.setOptions({
+              disableInteraction: true,
+              steps: steps.slice(11, 12),
+            });
+
+            introInstance.start();
+          }
+        });
+    });
+  }, [curSelectedNodeKey, nodeMappings]);
 
   useEffect(() => {
     // console.log(`isElaborate changed: ${isElaborate}`)
     editor.getEditorState().read(() => {
-      updateFloatingGroup()
-    })
-  }, [editor, showPanel])
+      updateFloatingGroup();
+    });
+  }, [editor, showPanel]);
 
   useEffect(() => {
     return mergeRegister(
       editor.registerCommand(
         SHOW_COUNTER_ARGUMENT_COMMAND,
         () => {
-          setShowPanel(true)
-          dispatch(resetCounterArguments())
-          fetchCounterArguments()
-          return true
+          setShowPanel(true);
+          dispatch(resetCounterArguments());
+          fetchCounterArguments();
+          return true;
         },
         lowPriority
       ),
@@ -215,65 +234,73 @@ export default function CounterArgumentMenu ({ editor }) {
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          setShowPanel(false)
-          return false
+          setShowPanel(false);
+          return false;
         },
         lowPriority
       )
-    )
-  }, [curSelectedNodeKey, nodeMappings])
+    );
+  }, [curSelectedNodeKey, nodeMappings]);
 
   const handlePageChange = (event, value) => {
-    setPage(value)
-  }
+    setPage(value);
+  };
 
   const handleAlertClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return
+    if (reason === "clickaway") {
+      return;
     }
 
-    setFetchingAlertOpen(false)
-  }
+    setFetchingAlertOpen(false);
+  };
 
   const handleReviewClick = (e) => {
-
     editor.update(() => {
-      let data = []
-      const pattern = /^\d{1,2}\. (.*):/i
+      let data = [];
+      const pattern = /^\d{1,2}\. (.*):/i;
       for (const ca of selectedCounterArguments) {
-        const match = ca.match(pattern)
+        const match = ca.match(pattern);
         if (match !== null) {
-          data.push({text: match[0].slice(0, -1), type: "CA", parent_lnode_key: curSelectedNodeKey, rel_type: "attackedBy"})
+          data.push({
+            text: match[0].slice(0, -1),
+            type: "CA",
+            parent_lnode_key: curSelectedNodeKey,
+            rel_type: "attackedBy",
+          });
         } else {
-          data.push({text: ca, type: "CA", parent_lnode_key: curSelectedNodeKey, rel_type: "attackedBy"})
+          data.push({
+            text: ca,
+            type: "CA",
+            parent_lnode_key: curSelectedNodeKey,
+            rel_type: "attackedBy",
+          });
         }
-        
       }
       // the range mode is not set to true (if using elaborate, it is set to true)
       dispatch(insertNewGeneratedNodes(data));
       dispatch(setFlowModalOpen());
       positionFloatingButton(groupRef.current, null);
-    })
-
+      dispatch(setCurrentStep(1))
+    });
 
     // dispatch(setPromptStatus("empty"))
   };
 
   return (
-    <div ref={groupRef} className='elaborate-group'>
+    <div ref={groupRef} className="elaborate-group">
       <Box>
         <Typography sx={{ mb: 2, mt: 2 }}>
           {isFectching
-            ? 'Looking for Counter Arguments...'
-            : 'Counter Arguments:'}
+            ? "Looking for Counter Arguments..."
+            : "Counter Arguments:"}
         </Typography>
 
         {isFectching ? (
           <Box>
-            <Skeleton animation='wave' />
-            <Skeleton animation='wave' />
-            <Skeleton animation='wave' />
-            <Skeleton animation='wave' />
+            <Skeleton animation="wave" />
+            <Skeleton animation="wave" />
+            <Skeleton animation="wave" />
+            <Skeleton animation="wave" />
 
             <Snackbar
               open={fetchingAlertOpen}
@@ -282,15 +309,15 @@ export default function CounterArgumentMenu ({ editor }) {
             >
               <Alert
                 onClose={handleAlertClose}
-                severity='success'
-                sx={{ width: '100%' }}
+                severity="success"
+                sx={{ width: "100%" }}
               >
                 Preparing counter arguments
               </Alert>
             </Snackbar>
           </Box>
         ) : (
-          <Box>
+          <Box id="counter-argument-menu">
             <Box>
               <Stack spacing={1}>
                 {counterArguments.map((p, index) => {
@@ -304,15 +331,15 @@ export default function CounterArgumentMenu ({ editor }) {
                           key={index}
                           label={p}
                           onClick={() => dispatch(handleSelectedCAChanged(p))}
-                          color='primary'
+                          color="primary"
                           variant={
                             selectedCounterArguments.includes(p)
-                              ? 'primary'
-                              : 'outlined'
+                              ? "primary"
+                              : "outlined"
                           }
                         />
                       </Tooltip>
-                    )
+                    );
                   }
                 })}
               </Stack>
@@ -320,21 +347,22 @@ export default function CounterArgumentMenu ({ editor }) {
 
             <Box
               sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
               }}
             >
               <Button
-                variant='contained'
+                variant="contained"
                 sx={{
                   height: 30,
                   mt: 2,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  mb: 2
+                  justifyContent: "center",
+                  alignItems: "center",
+                  mb: 2,
                 }}
                 onClick={handleReviewClick}
+                disabled={selectedCounterArguments.length === 0}
               >
                 Review and sketch
               </Button>
@@ -343,5 +371,5 @@ export default function CounterArgumentMenu ({ editor }) {
         )}
       </Box>
     </div>
-  )
+  );
 }

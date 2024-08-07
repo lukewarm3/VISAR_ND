@@ -73,11 +73,12 @@ export default function ElaborateFLoatingGroup({ editor }) {
   const selectedKeywords = useSelector(
     (state) => state.editor.selectedKeywords
   );
-  const allKeywords = useSelector(
-    (state) => state.editor.allKeywords
-  );
+  const allKeywords = useSelector((state) => state.editor.allKeywords);
   const promptStatus = useSelector((state) => state.editor.promptStatus);
   const prompts = useSelector((state) => state.editor.prompts);
+  const firstTimeUser = useSelector((state) => state.intro.firstTimeUser);
+  const introInstance = useSelector((state) => state.intro.introInstance);
+  const steps = useSelector((state) => state.intro.steps);
   const [isElaborate, setElaborate] = useState(false);
   const [isFetchingKeyword, setFetchingKeyword] = useState(false);
   const [promptedText, setPromptedText] = useState("");
@@ -87,11 +88,30 @@ export default function ElaborateFLoatingGroup({ editor }) {
   const type = useSelector((state) => state.editor.type);
   const [page, setPage] = useState(1);
 
+  const [showSteps2, setShowSteps2] = useState(false);
+  const [showSteps3, setShowSteps3] = useState(false);
+
   const dispatch = useDispatch();
 
   const handleChange = (event) => {
     setPromptedText(event.target.value);
   };
+
+  useEffect(() => {
+    if (firstTimeUser && introInstance) {
+      if (showSteps2) {
+        introInstance.setOptions({ disableInteraction: true, steps: steps.slice(6, 7) });
+
+        introInstance.start();
+        setShowSteps2(false);
+      } else if (showSteps3) {
+        introInstance.setOptions({ disableInteraction: true, steps: steps.slice(7, 8) });
+
+        introInstance.start();
+        setShowSteps3(false);
+      }
+    }
+  }, [showSteps2, showSteps3]);
 
   // useCallback memorizes the state and will update when one of the dependency get updated
   const updateFloatingGroup = useCallback(() => {
@@ -105,19 +125,22 @@ export default function ElaborateFLoatingGroup({ editor }) {
 
     let condition;
     const rootElement = editor.getRootElement();
-    const domRange = nativeSelection.rangeCount > 0 ? nativeSelection.getRangeAt(0) : null
+    const domRange =
+      nativeSelection.rangeCount > 0 ? nativeSelection.getRangeAt(0) : null;
 
     if (type === "elaborate") {
-      condition = selection != null &&
-      !nativeSelection.isCollapsed &&
-      rootElement != null &&
-      rootElement.contains(nativeSelection.anchorNode) &&
-      isElaborate;
+      condition =
+        selection != null &&
+        !nativeSelection.isCollapsed &&
+        rootElement != null &&
+        rootElement.contains(nativeSelection.anchorNode) &&
+        isElaborate;
     } else if (type === "evidence") {
-      condition = selection != null &&
-      rootElement != null &&
-      rootElement.contains(nativeSelection.anchorNode) &&
-      isElaborate;
+      condition =
+        selection != null &&
+        rootElement != null &&
+        rootElement.contains(nativeSelection.anchorNode) &&
+        isElaborate;
     }
 
     if (condition && domRange) {
@@ -150,32 +173,34 @@ export default function ElaborateFLoatingGroup({ editor }) {
     // console.log("Nodes:")
     // console.log(nodes)
     setPromptedText(selected_text);
-    console.log("[elaborate float group] selected text is", selected_text)
-    
-    const fetchPromise = fetch('http://127.0.0.1:5000/keyword', {
-      method: 'POST',
-      mode: 'cors',
+    console.log("[elaborate float group] selected text is", selected_text);
+
+    const fetchPromise = fetch("http://127.0.0.1:5000/keyword", {
+      method: "POST",
+      mode: "cors",
       headers: {
-        "Accept": 'application/json',
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify({
         prompt: selected_text,
-      })
-    })
+      }),
+    });
 
     fetchPromise
       .then((res) => {
         return res.json();
       })
       .then((res) => {
-        console.log("Test, the response is", res["response"])
+        console.log("Test, the response is", res["response"]);
         let Keywords = res["response"];
         dispatch(setPromptKeywords(Keywords));
         setFetchingKeyword(false);
-      }).catch(error => {
-        console.log("error is ", error)
+        setShowSteps2(true);
+      })
+      .catch((error) => {
+        console.log("error is ", error);
       });
   }, [dispatch]);
 
@@ -188,7 +213,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
       method: "POST",
       mode: "cors",
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
@@ -201,7 +226,8 @@ export default function ElaborateFLoatingGroup({ editor }) {
       .then((response) => {
         dispatch(setPrompts(response["response"])); // prompts is an array of {key: key, prompt: prompt (discussion point)}
         dispatch(setPromptStatus("fetched"));
-        setPage(1);  
+        setPage(1);
+        setShowSteps3(true);
         // each keyword can have multiple prompts
         // if there are more than 6 prompts, there will be more than 1 page
       });
@@ -318,8 +344,8 @@ export default function ElaborateFLoatingGroup({ editor }) {
           setElaborate(false);
           setPromptedText(selection.getTextContent());
           const selectedNodeKey = selection.getNodes()[0].__key;
-          dispatch(setCurRangeNodeKey(selectedNodeKey))
-          dispatch(setNodeSelected(selectedNodeKey))
+          dispatch(setCurRangeNodeKey(selectedNodeKey));
+          dispatch(setNodeSelected(selectedNodeKey));
           return false;
         },
         highPriority
@@ -368,14 +394,39 @@ export default function ElaborateFLoatingGroup({ editor }) {
   // };
 
   const handleContentSketchingClicked = (e) => {
-    dispatch(loadNodes({ selectedText: promptedText, selectedKeywords: selectedKeywords , discussionPoints: selectedPrompts, curRangeNodeKey: curRangeNodeKey}));
+    dispatch(
+      loadNodes({
+        selectedText: promptedText,
+        selectedKeywords: selectedKeywords,
+        discussionPoints: selectedPrompts,
+        curRangeNodeKey: curRangeNodeKey,
+      })
+    );
     // curRangeNodeKey is the selected text node in the paragraph
     dispatch(setFlowModalOpen());
-    dispatch(setRangeGenerationMode(true)) //
+    dispatch(setRangeGenerationMode(true)); //
     positionFloatingButton(buttonRef.current, null); // hide the floating button (the second parameter is null)
-    dispatch(setPromptStatus("empty"))
-    dispatch(setIsReactFlowInModal())
+    dispatch(setPromptStatus("empty"));
+    dispatch(setIsReactFlowInModal());
   };
+
+  const disableSketch = useCallback(() => {
+    const selectKeywordDiscussionPointNumber = selectedKeywords.reduce(
+      (acc, cur) => {
+        acc[cur] = 0;
+        return acc
+      },
+      {}
+    );
+
+    selectedPrompts.forEach((p) => {
+      selectKeywordDiscussionPointNumber[p["keyword"]] += 1;
+    });
+
+    return Object.values(selectKeywordDiscussionPointNumber).some(
+      (v) => v === 0
+    );
+  }, [selectedKeywords, selectedPrompts]);
 
   return (
     <div ref={buttonRef} className="elaborate-group">
@@ -424,7 +475,9 @@ export default function ElaborateFLoatingGroup({ editor }) {
                       label={r}
                       onClick={() => handleChipClick(r)}
                       color="primary"
-                      variant={ selectedKeywords.includes(r) ? "filled" : "outlined"}
+                      variant={
+                        selectedKeywords.includes(r) ? "filled" : "outlined"
+                      }
                     />
                   </Tooltip>
                 </Grid>
@@ -450,6 +503,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
                   mb: 2,
                 }}
                 onClick={() => fetchDiscussionPoints()}
+                disabled={selectedKeywords.length === 0}
               >
                 Generate discussion points
               </Button>
@@ -476,13 +530,18 @@ export default function ElaborateFLoatingGroup({ editor }) {
               </Snackbar>
             </Box>
           ) : (
-            <Box>
+            <Box id="discussion-points">
               <Typography sx={{ mb: 2, mt: 2 }}>
                 Potential discussion points:
               </Typography>
               <Box>
                 <Box>
-                  <Tabs value={tabValue} onChange={handleTabChange} scrollButtons="auto" variant="scrollable">
+                  <Tabs
+                    value={tabValue}
+                    onChange={handleTabChange}
+                    scrollButtons="auto"
+                    variant="scrollable"
+                  >
                     {selectedKeywords.map((r, index) => {
                       return <Tab key={index} label={r} color="primary" />;
                     })}
@@ -569,6 +628,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
                     mb: 2,
                   }}
                   onClick={handleContentSketchingClicked}
+                  disabled={disableSketch()}
                 >
                   Sketch content
                 </Button>

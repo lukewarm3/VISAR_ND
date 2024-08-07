@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { addDependency, getDependencies } from '../neo4j'
-import { positionFloatingButton, highlightDepText } from '../utils'
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { addDependency, getDependencies } from "../neo4j";
+import { positionFloatingButton, highlightDepText } from "../utils";
 import {
   SELECTION_CHANGE_COMMAND,
   $getSelection,
@@ -13,13 +13,13 @@ import {
   $createRangeSelection,
   $getRoot,
   $createTextNode,
-  createCommand
-} from 'lexical'
+  createCommand,
+} from "lexical";
 import {
   mergeRegister,
   removeClassNamesFromElement,
-  addClassNamesToElement
-} from '@lexical/utils'
+  addClassNamesToElement,
+} from "@lexical/utils";
 import {
   ELABORATE_COMMAND,
   ADD_EXAMPLE_COMMAND,
@@ -31,34 +31,39 @@ import {
   lowPriority,
   highPriority,
   EVIDENCE_COMMAND,
-  ARGUMENTATIVE_COMMAND
-} from '../commands/SelfDefinedCommands'
-import { $createHighlightDepNode } from '../nodes/HighlightDepNode'
-import { $isTextBlockNode } from '../nodes/TextBlockNode'
-import { $isHighlightDepNode } from '../nodes/HighlightDepNode'
+  ARGUMENTATIVE_COMMAND,
+} from "../commands/SelfDefinedCommands";
+import { $createHighlightDepNode } from "../nodes/HighlightDepNode";
+import { $isTextBlockNode } from "../nodes/TextBlockNode";
+import { $isHighlightDepNode } from "../nodes/HighlightDepNode";
 import {
   resetSupportingArguments,
   setCurSelectedNodeKey,
   setIsCurNodeEditable,
-  setSelectedSent
-} from '../slices/EditorSlice'
-import { useDispatch, useSelector } from 'react-redux'
-import { setNodeSelected, logInteractionData } from '../slices/FlowSlice'
-import { Divider } from '@mui/material'
-import { Stack } from '@mui/system'
+  setSelectedSent,
+} from "../slices/EditorSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { setNodeSelected, logInteractionData } from "../slices/FlowSlice";
+import { Divider } from "@mui/material";
+import { Stack } from "@mui/system";
 
-export function ArgumentativeMenu ({ editor }) {
-  const buttonRef = useRef(null)
-  const dispatch = useDispatch()
-  const nodeData = useSelector(state => state.flow.nodeData)
-  const [isMenuOpen, setMenuOpen] = useState(false) // the floating menu
+export function ArgumentativeMenu({ editor }) {
+  const buttonRef = useRef(null);
+  const dispatch = useDispatch();
+  const nodeData = useSelector((state) => state.flow.nodeData);
+  const [isMenuOpen, setMenuOpen] = useState(false); // the floating menu
   const curSelectedNodeKey = useSelector(
-    state => state.editor.curSelectedNodeKey
-  )
-  const isCurNodeEditable = useSelector(state => state.editor.isCurNodeEditable)
+    (state) => state.editor.curSelectedNodeKey
+  );
+  const isCurNodeEditable = useSelector(
+    (state) => state.editor.isCurNodeEditable
+  );
 
-  const username = useSelector(state => state.editor.username)
-  const sessionId = useSelector(state => state.editor.sessionId)
+  const username = useSelector((state) => state.editor.username);
+  const sessionId = useSelector((state) => state.editor.sessionId);
+  const firstTimeUser = useSelector((state) => state.intro.firstTimeUser);
+  const introInstance = useSelector((state) => state.intro.introInstance);
+  const steps = useSelector((state) => state.intro.steps);
 
   // const showDependencies = useCallback(() => {
   //   const selection = $getSelection()
@@ -78,55 +83,63 @@ export function ArgumentativeMenu ({ editor }) {
 
   // callback updating floating button position
   const updateArgumentativeMenu = useCallback(() => {
-    const selection = $getSelection()
-    const modalElem = buttonRef.current
-    const nativeSelection = window.getSelection()
+    const selection = $getSelection();
+    const modalElem = buttonRef.current;
+    const nativeSelection = window.getSelection();
 
-    console.log('updateArgumentativeMenu called')
+    console.log("updateArgumentativeMenu called");
 
     if (modalElem === null) {
-      return
+      return;
     }
 
-    const rootElement = editor.getRootElement()
-    const domRange = nativeSelection.rangeCount > 0 ? nativeSelection.getRangeAt(0) : null
+    const rootElement = editor.getRootElement();
+    const domRange =
+      nativeSelection.rangeCount > 0 ? nativeSelection.getRangeAt(0) : null;
 
     const condition =
       selection != null &&
       rootElement != null &&
       rootElement.contains(nativeSelection.anchorNode) &&
-      isMenuOpen && domRange
+      isMenuOpen &&
+      domRange;
 
     // console.log('[condition] isMenuOpen is ', isMenuOpen)
     // console.log('Whole condition is ', condition)
 
     if (condition) {
-      let rect
+      let rect;
       if (nativeSelection.anchorNode === rootElement) {
-        let inner = rootElement
+        let inner = rootElement;
         while (inner.firstElementChild != null) {
-          inner = inner.firstElementChild
+          inner = inner.firstElementChild;
         }
-        rect = inner.getBoundingClientReact()
+        rect = inner.getBoundingClientReact();
       } else {
-        rect = domRange.getBoundingClientRect()
+        rect = domRange.getBoundingClientRect();
       }
 
-      console.log('show rewrite modal')
-      positionFloatingButton(modalElem, rect)
+      console.log("show rewrite modal");
+      positionFloatingButton(modalElem, rect);
+      // if (firstTimeUser && introInstance && isMenuOpen) {
+      //   introInstance.setOptions({
+      //     disableInteraction: true,
+      //     steps: steps.slice(11, 12),
+      //   });
+
+      //   introInstance.start();
+      // }
     } else {
       // console.log(`[updateFloatingGroup]: element is inactive, isElaborate: ${isElaborate}`)
-      console.log("cannot show the argumentative menu")
-      positionFloatingButton(modalElem, null)
+      console.log("cannot show the argumentative menu");
+      positionFloatingButton(modalElem, null);
     }
 
-    
-
-    return true
-  }, [editor, isMenuOpen])
+    return true;
+  }, [editor, isMenuOpen]);
 
   useEffect(() => {
-    const buttonElem = buttonRef.current
+    const buttonElem = buttonRef.current;
 
     // editor.getEditorState().read(() => {
     //   positionFloatingButton(buttonElem, null)
@@ -136,10 +149,10 @@ export function ArgumentativeMenu ({ editor }) {
       editor.registerCommand(
         ARGUMENTATIVE_COMMAND,
         () => {
-          setMenuOpen(true)
-          console.log('rewrite set to true')
-          updateArgumentativeMenu()
-          return true
+          setMenuOpen(true);
+          console.log("rewrite set to true");
+          updateArgumentativeMenu();
+          return true;
         },
         lowPriority
       ),
@@ -148,19 +161,19 @@ export function ArgumentativeMenu ({ editor }) {
         SELECTION_CHANGE_COMMAND,
         () => {
           // console.log("[rewriteModal]: selection changed")
-          setMenuOpen(false)
-          updateArgumentativeMenu()
+          setMenuOpen(false);
+          updateArgumentativeMenu();
         },
         lowPriority
       )
-    )
-  }, [editor, updateArgumentativeMenu])
+    );
+  }, [editor, updateArgumentativeMenu]);
 
   useEffect(() => {
     editor.update(() => {
-      updateArgumentativeMenu()
-    })
-  }, [editor, isMenuOpen])
+      updateArgumentativeMenu();
+    });
+  }, [editor, isMenuOpen]);
 
   // useEffect(() => {
   //   editor.update(() => {
@@ -170,96 +183,96 @@ export function ArgumentativeMenu ({ editor }) {
   // }, [isCurNodeEditable])
 
   return (
-    <div className='floatbuttongroup' ref={buttonRef} sx={{ display: 'flex' }}>
+    <div id="argumentative-menu" className="floatbuttongroup" ref={buttonRef} sx={{ display: "flex" }}>
       <button
-        className='float-item'
+        className="float-item"
         onClick={() => {
           editor.update(() => {
-            const selection = $getSelection()
-            const nodes = selection.getNodes()
-            const node = nodes[0]
+            const selection = $getSelection();
+            const nodes = selection.getNodes();
+            const node = nodes[0];
             console.log(
-              '[counter argument button] current node key:',
+              "[counter argument button] current node key:",
               node.__key
-            )
-            dispatch(setCurSelectedNodeKey(node.__key))
-            dispatch(setNodeSelected(node.__key))
-            editor.dispatchCommand(SHOW_COUNTER_ARGUMENT_COMMAND, null)
-            positionFloatingButton(buttonRef.current, null)
+            );
+            dispatch(setCurSelectedNodeKey(node.__key));
+            dispatch(setNodeSelected(node.__key));
+            editor.dispatchCommand(SHOW_COUNTER_ARGUMENT_COMMAND, null);
+            positionFloatingButton(buttonRef.current, null);
 
             dispatch(
               logInteractionData({
                 username: username,
                 sessionId: sessionId,
-                type: 'counterArgument',
+                type: "counterArgument",
                 interactionData: {
                   textNodeKey: node.__key,
-                  oldContent: node.getTextContent()
-                }
+                  oldContent: node.getTextContent(),
+                },
               })
-            )
-          })
+            );
+          });
         }}
       >
         Counter Arguments
       </button>
-      <Divider orientation='vertical' />
+      <Divider orientation="vertical" />
       <button
-        className='float-item'
+        className="float-item"
         onClick={() => {
           editor.update(() => {
-            const selection = $getSelection()
-            const nodes = selection.getNodes()
-            const node = nodes[0]
-            console.log('[weaknesses button] current node key:', node.__key)
-            dispatch(setCurSelectedNodeKey(node.__key))
-            editor.dispatchCommand(SHOW_WEAKNESS_COMMAND, null)
-            positionFloatingButton(buttonRef.current, null)
+            const selection = $getSelection();
+            const nodes = selection.getNodes();
+            const node = nodes[0];
+            console.log("[weaknesses button] current node key:", node.__key);
+            dispatch(setCurSelectedNodeKey(node.__key));
+            editor.dispatchCommand(SHOW_WEAKNESS_COMMAND, null);
+            positionFloatingButton(buttonRef.current, null);
 
             dispatch(
               logInteractionData({
                 username: username,
                 sessionId: sessionId,
-                type: 'logicalWeakness',
+                type: "logicalWeakness",
                 interactionData: {
                   textNodeKey: node.__key,
-                  oldContent: node.getTextContent()
-                }
+                  oldContent: node.getTextContent(),
+                },
               })
-            )
-          })
+            );
+          });
         }}
       >
         Logical weaknesses
       </button>
-      <Divider orientation='vertical' />
+      <Divider orientation="vertical" />
       <button
-        className='float-item'
+        className="float-item"
         onClick={() => {
           editor.update(() => {
-            const selection = $getSelection()
-            const nodes = selection.getNodes()
-            const node = nodes[0]
-            dispatch(setCurSelectedNodeKey(node.__key))
-            editor.dispatchCommand(SHOW_SUPPORT_COMMAND, null)
-            positionFloatingButton(buttonRef.current, null)
+            const selection = $getSelection();
+            const nodes = selection.getNodes();
+            const node = nodes[0];
+            dispatch(setCurSelectedNodeKey(node.__key));
+            editor.dispatchCommand(SHOW_SUPPORT_COMMAND, null);
+            positionFloatingButton(buttonRef.current, null);
 
             dispatch(
               logInteractionData({
                 username: username,
                 sessionId: sessionId,
-                type: 'supportingEvidence',
+                type: "supportingEvidence",
                 interactionData: {
                   textNodeKey: node.__key,
-                  oldContent: node.getTextContent()
-                }
+                  oldContent: node.getTextContent(),
+                },
               })
-            )
-          })
+            );
+          });
         }}
       >
         Supporting evidences
       </button>
     </div>
-  )
+  );
 }

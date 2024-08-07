@@ -844,7 +844,6 @@ i.sync {
   background-image: url(images/icons/sync.png);
 }
 
-
 .highlight-dep-elb {
   /* background-color: #cdb4db; */
   padding: 1px 0.25rem;
@@ -867,7 +866,8 @@ i.sync {
 .react-flow__panel {
   padding: 5px 10px;
   background: white;
-  box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px,
+    rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
 }
 
 .custom-edge:hover {
@@ -918,7 +918,7 @@ i.sync {
 }
 
 .highlight-dep-elb:active {
-  pointer-events: none; 
+  pointer-events: none;
   opacity: 1;
   /* padding-bottom: 0.5px; */
 }
@@ -937,3 +937,14 @@ i.sync {
   background: rgba(255, 212, 0, 0.5);
   border-bottom: 1px solid rgba(255, 212, 0, 1);
 } */
+
+.customTooltip {
+  font-family: "Varela Round", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+.introjs-tooltip {
+  min-width: 350px !important;
+  max-width: 400px !important;
+}

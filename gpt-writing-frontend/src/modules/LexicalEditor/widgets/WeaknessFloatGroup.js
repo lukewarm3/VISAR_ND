@@ -304,6 +304,7 @@ export default function WeaknessFloatGroup ({ editor }) {
                     dispatch(setFixWeaknessModalOpen())
                     positionFloatingButton(groupRef.current, null)
                   }}
+                  disabled={selectedWeaknesses.length === 0}
                 >
                   Address weaknesses
                 </Button>

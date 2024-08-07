@@ -69,9 +69,9 @@ import ManualAddNodeModal from "./widgets/ManualAddNodeModal";
 import TaskDescriptionPlugin from "./plugins/TaskDescriptionPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import LoadEditorStatePlugin from "./plugins/LoadEditorStatePlugin";
-import { Steps } from "intro.js-react";
+import introJs from "intro.js";
 import "intro.js/introjs.css";
-import { disableSteps, enableSteps } from "./slices/IntroSlice";
+import { disableTutorial, setIntroInstance } from "./slices/IntroSlice";
 
 function Placeholder() {
   return <div className="editor-placeholder">Enter some rich text...</div>;
@@ -164,7 +164,7 @@ export default function Editor() {
   );
   const condition = useSelector((state) => state.editor.condition);
   const [editorState, setEditorState] = useState(null);
-  const stepsEnabled = useSelector((state) => state.intro.stepsEnabled);
+  const firstTimeUser = useSelector((state) => state.intro.firstTimeUser);
   const currentStep = useSelector((state) => state.intro.currentStep);
   const steps = useSelector((state) => state.intro.steps);
 
@@ -184,30 +184,48 @@ export default function Editor() {
         console.log("[editor] flow slice is", location.state.flowSlice);
         dispatch(setEditorSliceStates(location.state.editorSlice));
         dispatch(setFlowSliceStates(location.state.flowSlice));
+        //dispatch(disableTutorial()) // not the first time user
         setEditorState(location.state.editorState);
       }
     }
   }, [location]);
 
-  // useEffect(() => {
-  //   // Ensure all elements exist in the DOM before enabling the steps
-  //   if (document.querySelector(".toolbar")) {
-  //     console.log("enable intro.js!")
-  //     dispatch(enableSteps())
-  //   }
-  // }, []);
+  useEffect(() => {
+    if (firstTimeUser) {
+      const intro = introJs.tour();
+
+      intro.setOptions({
+        disableInteraction: true,
+        steps: steps.slice(0, 6),
+        tooltipClass: "customTooltip",
+      });
+
+      // intro.onBeforeExit((nextStepIndex) => {
+      //   return window.confirm("Are you sure you want to end the tutorial?");
+      // });
+
+      intro.start();
+
+      dispatch(setIntroInstance(intro));
+      //intro.exit()
+    }
+  }, [firstTimeUser]);
 
   return (
     <Box>
-      <Steps
+      {/* <Steps
         enabled={stepsEnabled}
         steps={steps}
         initialStep={currentStep}
         onBeforeChange={(nextStepIndex) => {
           console.log("Changing to step:", nextStepIndex);
         }}
+        onBeforeExit={(nextStepIndex) => {
+          return window.confirm("Are you sure you want to end the tutorial?")
+        }}
         onExit={() => dispatch(disableSteps())}
-      />
+      /> */}
+
       <LexicalComposer initialConfig={editorConfig}>
         <AppBar position="fixed" open={mindmapOpen}>
           <ToolbarPlugin />
@@ -347,7 +365,6 @@ export default function Editor() {
             anchor="right"
             open={mindmapOpen}
           >
-            <Typography>Very good!</Typography>
             <ReactFlowPlugin />
           </Drawer>
         )}
