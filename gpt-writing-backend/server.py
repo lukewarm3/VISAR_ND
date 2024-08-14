@@ -17,7 +17,8 @@ enablePreload = True # enable the preload of editor state, editor node, and flow
 test = False
 
 
-OpenAIClient = os.getenv("OPEN_AI_KEY")
+open_ai_key = os.getenv("OPEN_AI_KEY")
+OpenAIClient = OpenAI(api_key=open_ai_key)
 
 mongoDB_key = os.getenv("MONGO_DB_KEY")
 

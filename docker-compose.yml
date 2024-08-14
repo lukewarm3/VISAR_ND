@@ -21,3 +21,5 @@ services:
       - ./gpt-writing-frontend:/app/frontend-server
     ports:
       - 3000:3000
+    environment:
+      - CORS_ALLOWED_ORIGIN=http://localhost:3000
