@@ -70,10 +70,12 @@ export default function SignIn () {
         let editorState = null
         let flowSlice = null
         let editorSlice = null
+        let introSlice = null
         if (res.preload === true) {
           editorState = JSON.parse(res.editorState)
           flowSlice = JSON.parse(res.flowSlice)
           editorSlice = JSON.parse(res.editorSlice)
+          introSlice = JSON.parse(res.introSlice)
         }
 
         const taskProblem = res.taskProblem
@@ -98,6 +100,7 @@ export default function SignIn () {
               editorState: editorState,
               flowSlice: flowSlice,
               editorSlice: editorSlice,
+              introSlice: introSlice,
               taskDescription: task
             }
           })

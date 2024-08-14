@@ -1,3 +1,4 @@
-Flask==2.2.2
-Flask_Cors==3.0.10
-openai==0.25.0
+Flask==3.0.3
+Flask_Cors==4.0.1
+openai==1.37.0
+pymongo==4.8.0

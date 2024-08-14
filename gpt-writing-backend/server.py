@@ -16,11 +16,10 @@ max_tokens = 2048
 enablePreload = True # enable the preload of editor state, editor node, and flow node
 test = False
 
-with open('openai_key.json') as key_file:
-    OpenAIClient = OpenAI(api_key=json.load(key_file)['key'])
 
-with open('mongoDB_key.json') as key_file:
-    mongoDB_key = json.load(key_file)['key']
+OpenAIClient = os.getenv("OPEN_AI_KEY")
+
+mongoDB_key = os.getenv("MONGO_DB_KEY")
 
 # Update your mongoDB key here. You need to create a new mongoDB database called "gptwriting", and create collections called "users" and "interactionData" in the database.
 
@@ -46,13 +45,13 @@ def signup():
                 state = db.drafts.find_one({"username": username, "sessionId": user["latestSessionId"]})
                 if state is None:
                     return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
-                return jsonify({"status": "success", "message": "Login successfully", "preload": True, "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "taskProblem": "", "taskDescription": ""})
+                return jsonify({"status": "success", "message": "Login successfully", "preload": True, "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "introSlice": state["introSlice"], "taskProblem": "", "taskDescription": ""})
             # return existing user
-            return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
+            return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "introSlice":"", "taskProblem": "", "taskDescription": ""})
         #db.users.insert_one({"username": username, "password": password, "condition": condition, "latestSessionId": -1, "condTopicMapping": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5}})
         db.users.insert_one({"username": username, "condition": condition, "latestSessionId": -1, "condTopicMapping": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5}})
         print("Signup successfully")
-        return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
+        return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "introSlice":"", "taskProblem": "", "taskDescription": ""})
 
 # Only for user logging purpose
 @app.route("/login", methods=["POST"])

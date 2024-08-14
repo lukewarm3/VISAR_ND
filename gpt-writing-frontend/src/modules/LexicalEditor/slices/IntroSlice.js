@@ -33,7 +33,7 @@ const initialState = {
     {
       title: 'Explore 🪜"Step-by-Step Goal Recommendation" feature',
       intro:
-        'Now let\'s play with VISAR to help you write, please follow the steps:<br>1. Write a topic sentence in the editor.<br>2. Select the whole sentence.<br>3. Click the Elaborate button. <br>For example, write the topic sentence "University of Notre Dame is a great university"',
+        'Now let\'s play with VISAR to help you write, please follow the steps:<br>1. Write a topic sentence in the editor.<br>2. Select the whole sentence.<br>3. Click the Elaborate button. <br>For example, write the topic sentence "University of Notre Dame is a great university."',
     },
     // 6
     {
@@ -95,28 +95,38 @@ const initialState = {
     },
     // 16
     {
-        element:"#react-flow-plugin",
-        intro:'Try modify the text on one of the nodes and click "Done" once you finish.'
+      element: "#react-flow-plugin",
+      intro:
+        'Try modify the text on one of the nodes and click "Done" once you finish.',
     },
     // 17
     {
-        element: ".regenerate-replace-wrapper",
-        intro: 'You can regenerate the result by clicking "REGENERATE" if you are not satisfied with that, and then click the "REPLACE" to replace the text in the editor.'
+      element: "#regenerate-replace-wrapper",
+      intro:
+        'You can regenerate the result by clicking "REGENERATE" if you are not satisfied with that, and then click the "REPLACE" to replace the text in the editor.',
     },
     // 18
     {
-        element: ".prev-next-wrapper",
-        intro: 'You can also examine and update the dependent nodes in a recursive way in order to maintain consistency. <br>Try by clicking one of them.'
+      element: "#prev-next-wrapper",
+      intro:
+        "You can also examine and update the dependent nodes in a recursive way in order to maintain consistency. <br>Try by clicking one of them.",
     },
     // 19
     {
-        element: "#option-chips",
-        intro: 'Select a new topic for the dependent node and click "GENERATE TEXT".'
+      element: "#option-chips",
+      intro:
+        'Select a new topic for the dependent node and click "GENERATE TEXT".',
     },
     // 20
     {
-        element: ".prev-next-wrapper",
-        intro: 'Similarly, regenerate the text or replace the text if you want.'
+      element: "#prev-next-wrapper",
+      intro: "Similarly, regenerate the text or replace the text if you want.",
+    },
+    // 21
+    {
+      title: "Explore by yourself!",
+      intro:
+        'The basic tutorial ends! However, this does not cover everything and you can try them by yourself! For example, try the "Edit" when you click the highlighted text! <br><br>Also, try to write several related arguments as separate paragraphs and select all of them, then you will unlock the "Synthesize" feature that helps you write thesis! <br><br>Enjoy!',
     },
   ],
 };
@@ -125,6 +135,16 @@ const introSlice = createSlice({
   name: "intro",
   initialState,
   reducers: {
+    setIntroSliceStates: (state, action) => {
+      const { firstTimeUser, currentStep, introInstance } = action.payload;
+
+      return {
+        ...state,
+        firstTimeUser: firstTimeUser,
+        currentStep: currentStep,
+        introInstance: introInstance,
+      };
+    },
     enableTutorial: (state) => {
       state.firstTimeUser = true;
     },
@@ -141,6 +161,7 @@ const introSlice = createSlice({
 });
 
 export const {
+  setIntroSliceStates,
   enableTutorial,
   disableTutorial,
   setCurrentStep,

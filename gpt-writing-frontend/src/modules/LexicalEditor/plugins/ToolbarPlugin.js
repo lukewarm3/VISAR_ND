@@ -66,6 +66,7 @@ import {
   extendFlowEditorNodeMapping,
   setFlowSliceStates,
 } from "../slices/FlowSlice";
+import { setIntroSliceStates } from "../slices/IntroSlice";
 
 const LowPriority = 1;
 
@@ -810,12 +811,14 @@ export default function ToolbarPlugin() {
                         const editorState = JSON.parse(res["editorState"]);
                         const flowSlice = JSON.parse(res["flowSlice"]);
                         const editorSlice = JSON.parse(res["editorSlice"]);
+                        const introSlice = JSON.parse(res["introSlice"]);
 
                         console.log("[load state] editorState: ", editorState);
 
                         console.log("[load state flowSlice", flowSlice);
                         dispatch(setEditorSliceStates(editorSlice));
                         dispatch(setFlowSliceStates(flowSlice));
+                        dispatch(setIntroSliceStates(introSlice));
 
                         editor.update(() => {
                           // const initEditorStateWithKey =
@@ -858,6 +861,7 @@ export default function ToolbarPlugin() {
 
                   const flowSlice = store.getState().flow;
                   const editorSlice = store.getState().editor;
+                  const introSlice = store.getState.intro;
 
                   console.log("store: ", store.getState());
                   console.log("flowSlice: ", flowSlice);
@@ -879,6 +883,7 @@ export default function ToolbarPlugin() {
                       editorState: JSON.stringify(editorState),
                       flowSlice: JSON.stringify(flowSlice),
                       editorSlice: JSON.stringify(editorSlice),
+                      introSlice: JSON.stringify(introSlice),
                       condition: condition,
                     }),
                   })

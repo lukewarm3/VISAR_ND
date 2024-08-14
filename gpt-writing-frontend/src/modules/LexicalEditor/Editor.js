@@ -71,7 +71,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import LoadEditorStatePlugin from "./plugins/LoadEditorStatePlugin";
 import introJs from "intro.js";
 import "intro.js/introjs.css";
-import { disableTutorial, setIntroInstance } from "./slices/IntroSlice";
+import { disableTutorial, setCurrentStep, setFirstTimeUser, setIntroInstance, setIntroSliceStates } from "./slices/IntroSlice";
 
 function Placeholder() {
   return <div className="editor-placeholder">Enter some rich text...</div>;
@@ -164,9 +164,11 @@ export default function Editor() {
   );
   const condition = useSelector((state) => state.editor.condition);
   const [editorState, setEditorState] = useState(null);
+  const introInstance = useSelector(state=>state.intro.introInstance)
   const firstTimeUser = useSelector((state) => state.intro.firstTimeUser);
   const currentStep = useSelector((state) => state.intro.currentStep);
   const steps = useSelector((state) => state.intro.steps);
+  const updateModalOpen = useSelector((state) => state.editor.updateModalOpen);
 
   useEffect(() => {
     console.log("set condition", location.state.condition);
@@ -184,7 +186,7 @@ export default function Editor() {
         console.log("[editor] flow slice is", location.state.flowSlice);
         dispatch(setEditorSliceStates(location.state.editorSlice));
         dispatch(setFlowSliceStates(location.state.flowSlice));
-        //dispatch(disableTutorial()) // not the first time user
+        dispatch(setIntroSliceStates(location.state.introSlice)) // not the first time user
         setEditorState(location.state.editorState);
       }
     }
@@ -192,24 +194,39 @@ export default function Editor() {
 
   useEffect(() => {
     if (firstTimeUser) {
-      const intro = introJs.tour();
+      if (currentStep === 0) {
+        const intro = introJs.tour();
 
-      intro.setOptions({
-        disableInteraction: true,
-        steps: steps.slice(0, 6),
-        tooltipClass: "customTooltip",
-      });
+        intro.setOptions({
+          disableInteraction: true,
+          steps: steps.slice(0, 6),
+          tooltipClass: "customTooltip",
+        });
 
-      // intro.onBeforeExit((nextStepIndex) => {
-      //   return window.confirm("Are you sure you want to end the tutorial?");
-      // });
+        // intro.onBeforeExit((nextStepIndex) => {
+        //   return window.confirm("Are you sure you want to end the tutorial?");
+        // });
 
-      intro.start();
+        intro.start();
 
-      dispatch(setIntroInstance(intro));
-      //intro.exit()
+        dispatch(setIntroInstance(intro));
+        //intro.exit()
+      } else if (currentStep === 5 && !updateModalOpen) {
+        setTimeout(() => {
+          dispatch(setCurrentStep(6));
+          introInstance.setOptions({
+            disableInteraction: true,
+            steps: steps.slice(21, 22),
+          });
+  
+          introInstance.start();
+        }, 500);
+
+        introInstance.exit()
+        dispatch(disableTutorial())
+      }
     }
-  }, [firstTimeUser]);
+  }, [firstTimeUser, currentStep, updateModalOpen]);
 
   return (
     <Box>

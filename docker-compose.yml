@@ -5,16 +5,19 @@ services:
     build:
       context: ./gpt-writing-backend
       dockerfile: Dockerfile
-    volumes: 
+    environment:
+      - MONGO_DB_KEY=${MONGO_DB_KEY}
+      - OPEN_AI_KEY=${OPEN_AI_KEY}
+    volumes:
       - ./gpt-writing-backend:/app/backend-server
     ports:
-      - 8088:8088
-    
+      - 5000:5000
+
   frontend:
     build:
       context: ./gpt-writing-frontend
       dockerfile: Dockerfile
-    volumes: 
+    volumes:
       - ./gpt-writing-frontend:/app/frontend-server
     ports:
       - 3000:3000
