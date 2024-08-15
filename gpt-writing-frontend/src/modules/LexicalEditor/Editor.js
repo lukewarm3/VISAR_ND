@@ -72,6 +72,7 @@ import LoadEditorStatePlugin from "./plugins/LoadEditorStatePlugin";
 import introJs from "intro.js";
 import "intro.js/introjs.css";
 import { disableTutorial, setCurrentStep, setFirstTimeUser, setIntroInstance, setIntroSliceStates } from "./slices/IntroSlice";
+import ReactFlowHistoryPlugin from "./plugins/ReactFlowHistoryPlugin";
 
 function Placeholder() {
   return <div className="editor-placeholder">Enter some rich text...</div>;
@@ -251,6 +252,7 @@ export default function Editor() {
           <div className="editor-container">
             <LoadEditorStatePlugin editorState={editorState} />
             <FloatingButtonPlugin />
+            <ReactFlowHistoryPlugin />
             <LoadingPlugin />
             <div className="editor-inner">
               <RichTextPlugin

@@ -35,6 +35,7 @@ import {
   removeNodeFromDepGraph,
   setFlowEditorNodeMapping,
   setIsLazyUpdate,
+  addDeletedNodeAndEdgeToHistory,
 } from "../slices/FlowSlice";
 import {
   Box,
@@ -193,7 +194,9 @@ export default function Flow({ editor, mode, sidebar }) {
         const { updatedMappings, updatedGraph } = addGenartionsToEditor(
           depGraph,
           rootFlowKeys,
-          nodeMappings
+          nodeMappings,
+          curRangeNodeKey,
+          isRangeMode
         ); // use DFS to add generation text to the text node
         editor.dispatchCommand(SHOW_LOADING_COMMAND, { show: false });
         dispatch(extendFlowEditorNodeMapping(updatedMappings));
@@ -219,113 +222,76 @@ export default function Flow({ editor, mode, sidebar }) {
           }
         }
 
-        const node = $getNodeByKey(curRangeNodeKey);
-        let lastNode = null;
-        console.log("curRangeNodeKey: ", curRangeNodeKey);
-        if (node !== null && isRangeMode) {
-          console.log("curSelection: ", curSelection);
-          console.log("node Content: ", node.getTextContent());
-          console.log("index: ", node.getTextContent().indexOf(curSelection));
-
-          if (!$isHighlightDepNode(node)) {
-            const content = node.getTextContent();
-            const textblockNode = $createTextBlockNode();
-            const hlNode = $createHighlightDepNode(
-              "highlight-dep-elb",
-              content
-            );
-            textblockNode.append(hlNode);
-            node.replace(textblockNode);
-
-            let oldFlowKey = null;
-            for (const [key, value] of Object.entries(nodeMappings)) {
-              if (value === curRangeNodeKey) {
-                oldFlowKey = key;
-                break;
-              }
-            }
-            if (oldFlowKey !== null) {
-              dispatch(
-                setFlowEditorNodeMapping({
-                  flowKey: oldFlowKey,
-                  // originally the Text Node key, now change to the Highlight Node key
-                  EditorKey: hlNode.__key,
-                })
-              );
-            }
-          }
-
-          // const index = node.getTextContent().indexOf(curSelection)
-          // if (index !== -1) {
-          //   if (index > 0) {
-          //     const preText = node.getTextContent().slice(0, index)
-          //     const preTextNode = $createTextNode(preText)
-          //     textblockNode.append(preTextNode)
-          //     // node.replace(preTextNode)
-          //     const hlNode = $createHighlightDepNode(
-          //       'highlight-dep-elb',
-          //       curSelection
-          //     )
-          //     hlNode.setStyle('background-color: #bde0fe')
-          //     // preTextNode.insertAfter(hlNode)
-          //     textblockNode.append(hlNode)
-          //     lastNode = hlNode
-          //     if (index + curSelection.length < node.getTextContent().length) {
-          //       const postText = node
-          //         .getTextContent()
-          //         .slice(index + curSelection.length)
-          //       const postTextNode = $createTextNode(postText)
-          //       // hlNode.insertAfter(postTextNode)
-          //       textblockNode.append(postTextNode)
-          //       lastNode = postTextNode
-          //     }
-          //     node.replace(textblockNode)
-          //   } else {
-          //     const hlNode = $createHighlightDepNode(
-          //       'highlight-dep-elb',
-          //       curSelection
-          //     )
-          //     hlNode.setStyle('background-color: #bde0fe')
-          //     textblockNode.append(hlNode)
-          //     node.replace(textblockNode)
-          //     lastNode = hlNode
-          //     if (index + curSelection.length < node.getTextContent().length) {
-          //       const postText = node
-          //         .getTextContent()
-          //         .slice(index + curSelection.length)
-          //       const postTextNode = $createTextNode(postText)
-          //       // node.insertAfter(postTextNode)
-          //       textblockNode.append(postTextNode)
-          //       lastNode = postTextNode
-          //     }
-          //     const spaceNode = $createTextNode('  ')
-          //     // lastNode.insertAfter(spaceNode)
-          //     textblockNode.append(spaceNode)
-          //     const lineBreakNode1 = $createLineBreakNode()
-          //     const lineBreakNode2 = $createLineBreakNode()
-          //     textblockNode.append(lineBreakNode1)
-          //     textblockNode.append(lineBreakNode2)
-          //     // update the node mapping with the new hl node
-          //     let oldFlowKey = null
-          //     for (const [key, value] of Object.entries(nodeMappings)) {
-          //       if (value === curRangeNodeKey) {
-          //         oldFlowKey = key
-          //         break
-          //       }
-          //     }
-          //     if (oldFlowKey !== null) {
-          //       dispatch(
-          //         setFlowEditorNodeMapping({
-          //           flowKey: oldFlowKey,
-          //           EditorKey: hlNode.__key
-          //         })
-          //       )
-          //     }
-          //   }
-          // else {
-          //   console.log("cannot find the selection in the node's text content")
-          // }
-        }
+        // const index = node.getTextContent().indexOf(curSelection)
+        // if (index !== -1) {
+        //   if (index > 0) {
+        //     const preText = node.getTextContent().slice(0, index)
+        //     const preTextNode = $createTextNode(preText)
+        //     textblockNode.append(preTextNode)
+        //     // node.replace(preTextNode)
+        //     const hlNode = $createHighlightDepNode(
+        //       'highlight-dep-elb',
+        //       curSelection
+        //     )
+        //     hlNode.setStyle('background-color: #bde0fe')
+        //     // preTextNode.insertAfter(hlNode)
+        //     textblockNode.append(hlNode)
+        //     lastNode = hlNode
+        //     if (index + curSelection.length < node.getTextContent().length) {
+        //       const postText = node
+        //         .getTextContent()
+        //         .slice(index + curSelection.length)
+        //       const postTextNode = $createTextNode(postText)
+        //       // hlNode.insertAfter(postTextNode)
+        //       textblockNode.append(postTextNode)
+        //       lastNode = postTextNode
+        //     }
+        //     node.replace(textblockNode)
+        //   } else {
+        //     const hlNode = $createHighlightDepNode(
+        //       'highlight-dep-elb',
+        //       curSelection
+        //     )
+        //     hlNode.setStyle('background-color: #bde0fe')
+        //     textblockNode.append(hlNode)
+        //     node.replace(textblockNode)
+        //     lastNode = hlNode
+        //     if (index + curSelection.length < node.getTextContent().length) {
+        //       const postText = node
+        //         .getTextContent()
+        //         .slice(index + curSelection.length)
+        //       const postTextNode = $createTextNode(postText)
+        //       // node.insertAfter(postTextNode)
+        //       textblockNode.append(postTextNode)
+        //       lastNode = postTextNode
+        //     }
+        //     const spaceNode = $createTextNode('  ')
+        //     // lastNode.insertAfter(spaceNode)
+        //     textblockNode.append(spaceNode)
+        //     const lineBreakNode1 = $createLineBreakNode()
+        //     const lineBreakNode2 = $createLineBreakNode()
+        //     textblockNode.append(lineBreakNode1)
+        //     textblockNode.append(lineBreakNode2)
+        //     // update the node mapping with the new hl node
+        //     let oldFlowKey = null
+        //     for (const [key, value] of Object.entries(nodeMappings)) {
+        //       if (value === curRangeNodeKey) {
+        //         oldFlowKey = key
+        //         break
+        //       }
+        //     }
+        //     if (oldFlowKey !== null) {
+        //       dispatch(
+        //         setFlowEditorNodeMapping({
+        //           flowKey: oldFlowKey,
+        //           EditorKey: hlNode.__key
+        //         })
+        //       )
+        //     }
+        //   }
+        // else {
+        //   console.log("cannot find the selection in the node's text content")
+        // }
       });
     });
     dispatch(setRangeGenerationMode(false));
@@ -333,6 +299,19 @@ export default function Flow({ editor, mode, sidebar }) {
   }, []);
 
   const onNodeChange = (changes) => {
+    changes.forEach((change) => {
+      if (change.type === "remove") {
+        const deletedNode = nodes.filter((node) => node.id === change.id);
+        const deletedEdges = edges.filter((edge) => edge.target === change.id);
+        dispatch(
+          addDeletedNodeAndEdgeToHistory({
+            deletedNodeID: change.id,
+            deletedNode,
+            deletedEdges,
+          })
+        );
+      }
+    });
     editor.update(() => {
       changes.forEach((change) => {
         if (change.type === "remove") {
@@ -351,7 +330,7 @@ export default function Flow({ editor, mode, sidebar }) {
             }
           });
 
-          dispatch(removeNodeFromDepGraph(change.id));
+          //dispatch(removeNodeFromDepGraph(change.id));
         }
       });
 
@@ -411,7 +390,7 @@ export default function Flow({ editor, mode, sidebar }) {
   }, [curClickedNodeKey]);
 
   return (
-    <Box >
+    <Box>
       (
       <Grid
         container
@@ -426,7 +405,7 @@ export default function Flow({ editor, mode, sidebar }) {
       >
         <Grid item xs={mode === "modal" ? 11 : 12}>
           <ReactFlow
-          id="react-flow-plugin"
+            id="react-flow-plugin"
             nodes={nodes}
             onNodesChange={onNodeChange}
             edges={edges}

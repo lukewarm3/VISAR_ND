@@ -37,6 +37,7 @@ const initialState = {
   },
   finalKeywords: [],
   dependencyGraph: {},
+  deletedNodeHistory: {},
 };
 
 export const NodeEdgeTypeMapping = {
@@ -277,6 +278,14 @@ const flowSlice = createSlice({
         dependencyGraph: dependencyGraph,
       };
     },
+    setNodes(state, action) {
+      const { updatedNodes } = action.payload;
+      state.nodes = updatedNodes;
+    },
+    setEdges(state, action) {
+      const { updatedEdges } = action.payload;
+      state.edges = updatedEdges;
+    },
     setSelectedPrompts(state, action) {
       const prompts = action.payload;
       return {
@@ -290,12 +299,82 @@ const flowSlice = createSlice({
         isLazyUpdate: action.payload,
       };
     },
+    addDeletedNodeAndEdgeToHistory(state, action) {
+      const { deletedNodeID, deletedNode, deletedEdges } = action.payload;
+
+      const newHistory = { ...state.deletedNodeHistory };
+      const dependencyGraph = JSON.parse(JSON.stringify(state.dependencyGraph));
+
+      newHistory[deletedNodeID] = [deletedNode, deletedEdges];
+
+      // remove the child id from its parent, prevent future DFS effect on this "temporarily deleted" child
+      const parentKey = dependencyGraph[deletedNodeID].parent;
+      if (parentKey) {
+        const parent = dependencyGraph[parentKey];
+        parent.children = parent.children.filter(
+          (childID) => childID !== deletedNodeID
+        );
+      }
+
+      return {
+        ...state,
+        deletedNodeHistory: newHistory,
+        dependencyGraph: dependencyGraph,
+      };
+    },
+    addDeletedNodeAndEdgeBackToChart(state, action) {
+      const flowNodeKey = action.payload;
+
+      let new_nodes = [...state.nodes];
+      let new_edges = [...state.edges];
+      const deletedNodeHistory = JSON.parse(
+        JSON.stringify(state.deletedNodeHistory)
+      );
+      const dependencyGraph = JSON.parse(JSON.stringify(state.dependencyGraph));
+
+      console.log(
+        "[add deleted back to chart] deletedNodeHistory[flowNodeKey] is ",
+        deletedNodeHistory[flowNodeKey]
+      );
+
+      const deletedNodeInfo = deletedNodeHistory[flowNodeKey][0];
+      const deletedEdgesInfo = deletedNodeHistory[flowNodeKey][1];
+
+      // add the child id back to its parent's children array
+      for (const nodeInfo of deletedNodeInfo) {
+        const nodeID = nodeInfo.id;
+        console.log("node ID is ", nodeID);
+        const parentID = dependencyGraph[nodeID].parent;
+        if (parentID) {
+          const parent = dependencyGraph[parentID];
+          parent.children.push(nodeID);
+        }
+
+        new_nodes.push(nodeInfo);
+      }
+
+      new_edges.push(...deletedEdgesInfo);
+      delete deletedNodeHistory[flowNodeKey];
+
+      console.log(
+        "[add deleted back to chart] after deletedNodeHistory is ",
+        deletedNodeHistory
+      );
+
+      return {
+        ...state,
+        nodes: new_nodes,
+        edges: new_edges,
+        deletedNodeHistory: deletedNodeHistory,
+        dependencyGraph: dependencyGraph,
+      };
+    },
     removeNodeFromDepGraph(state, action) {
       let dependencyGraph = JSON.parse(JSON.stringify(state.dependencyGraph));
       let nodeMappings = JSON.parse(
         JSON.stringify(state.flowEditorNodeMapping)
       );
-      const delNodeKey = action.payload;
+      const delNodeKey = action.payload; // react flow node key
       console.log(
         "[removeNode] depGraph and its length: ",
         dependencyGraph,
@@ -320,7 +399,11 @@ const flowSlice = createSlice({
         );
 
         console.log("removeNodeFromDepGraph is called, del key: ", delNodeKey);
+        // finally, delete the key itself
         delete dependencyGraph[delNodeKey];
+        if (delNodeKey in nodeMappings) {
+          delete nodeMappings[delNodeKey];
+        }
       }
 
       console.log("[flow slice] after removeNode, depGraph: ", dependencyGraph);
@@ -394,7 +477,7 @@ const flowSlice = createSlice({
         newFlowEditorNodeMapping
       );
 
-      console.log("[setFlowEditorNodeMapping] new mapping:", newMappings)
+      console.log("[setFlowEditorNodeMapping] new mapping:", newMappings);
       return {
         ...state,
         flowEditorNodeMapping: { ...newMappings },
@@ -1043,7 +1126,6 @@ const flowSlice = createSlice({
         flowEditorNodeMapping: { ...flowEditorNodeMapping },
       };
     },
-    
   },
 
   extraReducers: {
@@ -1089,6 +1171,10 @@ export const {
   setFlowSliceStates,
   setSelectedPrompts,
   addNode,
+  addDeletedNodeAndEdgeToHistory,
+  addDeletedNodeAndEdgeBackToChart,
+  setNodes,
+  setEdges,
   setNodeData,
   setEdgeData,
   extendFlowEditorNodeMapping,

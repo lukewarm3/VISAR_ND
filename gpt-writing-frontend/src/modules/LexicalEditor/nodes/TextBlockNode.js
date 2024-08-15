@@ -74,7 +74,7 @@ import type {
   
     createDOM(config: EditorConfig): HTMLElement {
       const element = document.createElement('text-block');
-      this.__element = element;
+      //this.__element = element;
       addClassNamesToElement(element, config.theme.textBlock);
     //   if (this.__ids.length > 1) {
     //     addClassNamesToElement(element, config.theme.markOverlap);

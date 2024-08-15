@@ -32,7 +32,8 @@ export class HighlightDepNode extends TextNode {
   }
 
   getKey() {
-    return this.__key
+    const self = this.getLatest();
+    return self.__key;
   }
 
   createDOM (config: EditorConfig): HTMLElement { // config: Provides access to the editor’s configuration and utilities
@@ -43,7 +44,8 @@ export class HighlightDepNode extends TextNode {
   }
 
   setPrompt (prompt: string) {
-    this.__prompt = prompt
+    const self = this.getWritable()
+    self.__prompt = prompt
   }
 
   getPrompt (): string {
@@ -58,11 +60,24 @@ export class HighlightDepNode extends TextNode {
     config,
     
   ): boolean {
-    super.updateDOM(prevNode, element, config)
-    this.__element = prevNode.__element
-    this.__hl_type = prevNode.__hl_type
-    this.__prompt = prevNode.__prompt
-    return false;
+    // First, call the parent class's updateDOM method
+    const didUpdate = super.updateDOM(prevNode, element, config);
+
+    if (this.__hl_type !== prevNode.__hl_type) {
+      // If the highlight type has changed, update the DOM class
+      element.classList.remove(prevNode.__hl_type);
+      element.classList.add(this.__hl_type);
+      return true; // Return true to indicate the DOM has been updated
+    }
+
+    if (this.__prompt !== prevNode.__prompt) {
+      // If the prompt has changed, update the corresponding DOM attribute or state
+      element.setAttribute('data-prompt', this.__prompt);
+      return true; // Return true to indicate the DOM has been updated
+    }
+
+    // If no significant changes, return false
+    return didUpdate;
   }
 
   // serializedNode : contains all the necessary data to recreate the node. 

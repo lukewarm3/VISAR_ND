@@ -490,7 +490,7 @@ export function DFS(stateDepGraph, curNodeKey, stateNodeMappings, visited) {
 
   // curNodeKey should not appear in the nodeMapping because there is no relation yet
   // usually the root key's isImplemented is True, so it will not enter into this if statement
-  if (!(curNodeKey in Object.keys(nodeMappings)) && !curNode["isImplemented"]) {
+  if (!(curNodeKey in nodeMappings) && !curNode["isImplemented"]) {
     // Only add lexical node when the corrresponding flow node is not implemented in the editor (which means it is newly added)
 
     // console.log(nodeMappings)
@@ -511,7 +511,7 @@ export function DFS(stateDepGraph, curNodeKey, stateNodeMappings, visited) {
       curNode["text"]
     );
     // hlNode.setStyle(`background-color: ${randomizeBGColor()}`)
-
+    console.log("[util] create highlighted node, curNode is ", curNode);
     const textBlockNode = $createTextBlockNode();
 
     switch (curNode["type"]) {
@@ -606,7 +606,9 @@ export function DFS(stateDepGraph, curNodeKey, stateNodeMappings, visited) {
 export function addGenartionsToEditor(
   stateDepGraph,
   rootFlowKeys,
-  stateNodeMappings
+  stateNodeMappings,
+  curRangeNodeKey,
+  isRangeMode
 ) {
   let nodeMappings = JSON.parse(JSON.stringify(stateNodeMappings));
   let depGraph = JSON.parse(JSON.stringify(stateDepGraph));
@@ -642,6 +644,32 @@ export function addGenartionsToEditor(
   });
 
   console.log("updatedDepGraph: ", depGraph);
+
+  const node = $getNodeByKey(curRangeNodeKey);
+  console.log("curRangeNodeKey: ", curRangeNodeKey);
+  if (node !== null && isRangeMode) {
+    console.log("node Content: ", node.getTextContent());
+
+    if (!$isHighlightDepNode(node)) {
+      const content = node.getTextContent();
+      const textblockNode = $createTextBlockNode();
+      const hlNode = $createHighlightDepNode(
+        "highlight-dep-elb",
+        content
+      );
+      textblockNode.append(hlNode);
+      node.replace(textblockNode);
+
+      let oldFlowKey = null;
+      for (const [key, value] of Object.entries(nodeMappings)) {
+        if (value === curRangeNodeKey) {
+          oldFlowKey = key;
+          break;
+        }
+      }
+      nodeMappings[oldFlowKey] = hlNode.__key
+    }
+  }
 
   return { updatedMappings: nodeMappings, updatedGraph: depGraph };
 }
@@ -1141,8 +1169,11 @@ export function assignNewEditorNodeKeyToMapping(
   dependencyGraph,
   flowEditorNodeMapping
 ) {
-  flowEditorNodeMapping = JSON.parse(JSON.stringify(flowEditorNodeMapping))
-  console.log("[assign new key to mapping] dependency graph is ", dependencyGraph)
+  flowEditorNodeMapping = JSON.parse(JSON.stringify(flowEditorNodeMapping));
+  console.log(
+    "[assign new key to mapping] dependency graph is ",
+    dependencyGraph
+  );
 
   for (const [newEditorKey, editorNode] of editorStateNodeMap) {
     if ($isHighlightDepNode(editorNode)) {
