@@ -34,7 +34,6 @@ const initialState = {
   isReactFlowInModal: false,
   isRangeMode: false,
   taskDescription: null,
-  totalHightlightNodes: 0,
 };
 
 export const generateRewrite = createAsyncThunk(

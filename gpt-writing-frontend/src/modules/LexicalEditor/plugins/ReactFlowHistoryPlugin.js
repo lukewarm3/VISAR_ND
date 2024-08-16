@@ -8,6 +8,7 @@ import {
   setEdges,
   setNodes,
 } from "../slices/FlowSlice";
+import { $isHighlightDepNode } from "../nodes/HighlightDepNode";
 
 const ReactFlowHistoryPlugin = () => {
   const [editor] = useLexicalComposerContext();
@@ -27,21 +28,23 @@ const ReactFlowHistoryPlugin = () => {
     const editorState = editor.getEditorState();
 
     // check if the editor has the node that does not have a corresponding flow node in the chart
-    editorState._nodeMap.forEach((_, key) => {
-      let flowNodeKey = null;
-      for (const [flowKey, editorKey] of Object.entries(nodeMapping)) {
-        if (editorKey === key) {
-          flowNodeKey = flowKey;
-          break;
+    editorState._nodeMap.forEach((node, key) => {
+      if ($isHighlightDepNode(node)) {
+        let flowNodeKey = null;
+        for (const [flowKey, editorKey] of Object.entries(nodeMapping)) {
+          if (editorKey === key) {
+            flowNodeKey = flowKey;
+            break;
+          }
         }
-      }
 
-      if (flowNodeKey in deletedNodeHistory) {
-        console.log(
-          "[react flow history] undo/redo, then find the deleted node key in history: ",
-          flowNodeKey
-        );
-        dispatch(addDeletedNodeAndEdgeBackToChart(flowNodeKey));
+        if (flowNodeKey in deletedNodeHistory) {
+          console.log(
+            "[react flow history] undo/redo, then find the deleted node key in history: ",
+            flowNodeKey
+          );
+          dispatch(addDeletedNodeAndEdgeBackToChart(flowNodeKey));
+        }
       }
     });
 

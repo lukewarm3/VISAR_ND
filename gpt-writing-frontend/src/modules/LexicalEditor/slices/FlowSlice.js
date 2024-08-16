@@ -259,6 +259,7 @@ const flowSlice = createSlice({
         isLazyUpdate,
         finalKeywords,
         dependencyGraph,
+        deletedNodeHistory
       } = action.payload;
 
       return {
@@ -276,6 +277,7 @@ const flowSlice = createSlice({
         isLazyUpdate: isLazyUpdate,
         finalKeywords: finalKeywords,
         dependencyGraph: dependencyGraph,
+        deletedNodeHistory: {}  // the delete node history should be cleared
       };
     },
     setNodes(state, action) {
@@ -368,6 +370,54 @@ const flowSlice = createSlice({
         deletedNodeHistory: deletedNodeHistory,
         dependencyGraph: dependencyGraph,
       };
+    },
+    // this function will clear unused node from depGraph, nodemapping, nodeData, edgeData
+    clearUnusedNodeAndEdge(state, action) {
+      const nodes = state.nodes
+      const edges = state.edges
+      const dependencyGraph = JSON.parse(JSON.stringify(state.dependencyGraph))
+      const flowEditorNodeMapping = JSON.parse(JSON.stringify(state.flowEditorNodeMapping))
+      const nodeData = {...state.nodeData}
+      const edgeData = {...state.edgeData}
+
+      const nodeIDs = nodes.map(node => node.id)
+      const edgeIDs = edges.map(edge => edge.id)
+
+      // clear from dep graph
+      for (const key in dependencyGraph) {
+        if (!(nodeIDs.includes(key))) {
+          delete dependencyGraph[key]
+        }
+      }
+
+      // clear from node mapping
+      for (const key in flowEditorNodeMapping) {
+        if (!(nodeIDs.includes(key))) {
+          delete flowEditorNodeMapping[key]
+        }
+      }
+
+      // clear from nodeData
+      for (const key in nodeData) {
+        if (!(nodeIDs.includes(key))) {
+          delete nodeData[key]
+        }
+      }
+
+      // clear from edgeData
+      for (const key in edgeData) {
+        if (!(edgeIDs.includes(key))) {
+          delete edgeData[key]
+        }
+      }
+
+      return {
+        ...state,
+        dependencyGraph: dependencyGraph,
+        flowEditorNodeMapping: flowEditorNodeMapping,
+        nodeData: nodeData,
+        edgeData: edgeData
+      }
     },
     removeNodeFromDepGraph(state, action) {
       let dependencyGraph = JSON.parse(JSON.stringify(state.dependencyGraph));
@@ -1173,6 +1223,7 @@ export const {
   addNode,
   addDeletedNodeAndEdgeToHistory,
   addDeletedNodeAndEdgeBackToChart,
+  clearUnusedNodeAndEdge,
   setNodes,
   setEdges,
   setNodeData,

@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import introJs from "intro.js";
 
 const initialState = {
   firstTimeUser: true,
@@ -136,7 +137,12 @@ const introSlice = createSlice({
   initialState,
   reducers: {
     setIntroSliceStates: (state, action) => {
-      const { firstTimeUser, currentStep, introInstance } = action.payload;
+      const { firstTimeUser, currentStep } = action.payload;
+
+      let introInstance = state.introInstance;
+      if (firstTimeUser && introInstance === null) {
+        introInstance = introJs.tour();
+      }
 
       return {
         ...state,

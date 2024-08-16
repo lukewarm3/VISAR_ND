@@ -788,7 +788,7 @@ export default function ToolbarPlugin() {
               <i className="format justify-align" />
             </button>
             <Divider />
-            <button
+            {/* <button
               className="toolbar-item"
               aria-label="Load Draft"
               onClick={() => {
@@ -844,7 +844,7 @@ export default function ToolbarPlugin() {
               }}
             >
               <i className="format sync" />
-            </button>
+            </button> */}
             <button
               id="save"
               className="toolbar-item"
@@ -861,11 +861,12 @@ export default function ToolbarPlugin() {
 
                   const flowSlice = store.getState().flow;
                   const editorSlice = store.getState().editor;
-                  const introSlice = store.getState.intro;
+                  const introSlice = store.getState().intro;
 
                   console.log("store: ", store.getState());
                   console.log("flowSlice: ", flowSlice);
                   console.log("editorSlice: ", editorSlice);
+                  console.log("introSlice ", introSlice)
 
                   const res = fetch("http://127.0.0.1:5000/saveDraft", {
                     method: "POST",
@@ -883,7 +884,7 @@ export default function ToolbarPlugin() {
                       editorState: JSON.stringify(editorState),
                       flowSlice: JSON.stringify(flowSlice),
                       editorSlice: JSON.stringify(editorSlice),
-                      introSlice: JSON.stringify(introSlice),
+                      introSlice: JSON.stringify({...introSlice, introInstance: null}),
                       condition: condition,
                     }),
                   })

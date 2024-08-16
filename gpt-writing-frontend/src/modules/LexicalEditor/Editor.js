@@ -57,7 +57,7 @@ import {
   setTaskDescription,
   setEditorSliceStates,
 } from "./slices/EditorSlice";
-import { setFlowSliceStates, setNodeSelected } from "./slices/FlowSlice";
+import { clearUnusedNodeAndEdge, setFlowSliceStates, setNodeSelected } from "./slices/FlowSlice";
 import SeeAlternativeModal from "./widgets/SeeAlternativeModal";
 import FixWeaknessModal from "./widgets/FixWeaknessModal";
 import { ADD_EXAMPLE_COMMAND } from "./commands/SelfDefinedCommands";
@@ -187,6 +187,7 @@ export default function Editor() {
         console.log("[editor] flow slice is", location.state.flowSlice);
         dispatch(setEditorSliceStates(location.state.editorSlice));
         dispatch(setFlowSliceStates(location.state.flowSlice));
+        dispatch(clearUnusedNodeAndEdge())
         dispatch(setIntroSliceStates(location.state.introSlice)) // not the first time user
         setEditorState(location.state.editorState);
       }

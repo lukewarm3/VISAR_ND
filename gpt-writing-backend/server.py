@@ -110,7 +110,7 @@ def loadDraft():
                 print("Draft not found")
                 return jsonify({"status": "fail", "message": "Draft not found"})
             print("Draft loaded successfully")
-            return jsonify({"status": "success", "message": "Draft loaded successfully", "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"]})
+            return jsonify({"status": "success", "message": "Draft loaded successfully", "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "introSlice":state["introSlice"]})
         else:
             print("User not found")
             return jsonify({"status": "fail", "message": "User not found"})
@@ -126,11 +126,12 @@ def saveDraft():
         editorState = response["editorState"]
         flowSlice = response["flowSlice"]
         editorSlice = response["editorSlice"]
+        introSlice = response["introSlice"]
         condition = response["condition"]
         # depGraph = json.loads(response["depGraph"])
 
         db.drafts.replace_one({"username": username, "sessionId": sessionId}, {
-                              "username": username, "sessionId": sessionId, "draft": draft, "condition": condition, "depGraph": depGraph, "editorState": editorState, "flowSlice": flowSlice, "editorSlice": editorSlice}, upsert=True)
+                              "username": username, "sessionId": sessionId, "draft": draft, "condition": condition, "depGraph": depGraph, "editorState": editorState, "flowSlice": flowSlice, "editorSlice": editorSlice, "introSlice": introSlice}, upsert=True)
 
         db.users.update_one({"username": username}, { "$set": { "latestSessionId" : sessionId  }})
 

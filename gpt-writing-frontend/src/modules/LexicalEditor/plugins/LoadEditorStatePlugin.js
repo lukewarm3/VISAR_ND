@@ -2,11 +2,14 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import React, { memo, useEffect } from "react";
 import { assignNewEditorNodeKeyToMapping } from "../utils";
 import { useDispatch, useSelector } from "react-redux";
-import { extendFlowEditorNodeMapping } from "../slices/FlowSlice";
+import {
+  clearUnusedNodeAndEdge,
+  extendFlowEditorNodeMapping,
+} from "../slices/FlowSlice";
 
 const LoadEditorStatePlugin = memo(({ editorState }) => {
   const [editor] = useLexicalComposerContext();
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
   const dependencyGraph = useSelector((state) => state.flow.dependencyGraph);
   const nodeMapping = useSelector((state) => state.flow.flowEditorNodeMapping);
 
