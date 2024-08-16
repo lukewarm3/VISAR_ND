@@ -1,4 +1,4 @@
-FROM python:3.9-slim-buster
+FROM python:3.12.4-slim
 
 WORKDIR /app/backend-server
 
