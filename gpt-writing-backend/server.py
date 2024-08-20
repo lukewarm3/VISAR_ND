@@ -1,6 +1,7 @@
 import re
 import os
 import json
+from dotenv import load_dotenv
 from openai import OpenAI
 from flask import Flask, redirect, render_template, request, url_for, make_response, jsonify
 from flask_cors import CORS, cross_origin
@@ -16,6 +17,7 @@ max_tokens = 2048
 enablePreload = True # enable the preload of editor state, editor node, and flow node
 test = False
 
+load_dotenv()
 
 open_ai_key = os.getenv("OPEN_AI_KEY")
 OpenAIClient = OpenAI(api_key=open_ai_key)
@@ -32,7 +34,9 @@ db = client.gptwriting
 
 @app.route("/signup", methods=["POST"])
 def signup():
+    print("testing here")
     if request.method == "POST":
+        print("testing here")
         response = request.get_json()
         username = response["username"]
         #password = response["password"]
@@ -45,7 +49,7 @@ def signup():
                 # get the states from drafe collections
                 state = db.drafts.find_one({"username": username, "sessionId": user["latestSessionId"]})
                 if state is None:
-                    return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
+                    return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "introSlice": "", "taskDescription": ""})
                 return jsonify({"status": "success", "message": "Login successfully", "preload": True, "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "introSlice": state["introSlice"], "taskProblem": "", "taskDescription": ""})
             # return existing user
             return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "introSlice":"", "taskProblem": "", "taskDescription": ""})
