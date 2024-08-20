@@ -34,9 +34,7 @@ db = client.gptwriting
 
 @app.route("/signup", methods=["POST"])
 def signup():
-    print("testing here")
     if request.method == "POST":
-        print("testing here")
         response = request.get_json()
         username = response["username"]
         #password = response["password"]
@@ -49,7 +47,7 @@ def signup():
                 # get the states from drafe collections
                 state = db.drafts.find_one({"username": username, "sessionId": user["latestSessionId"]})
                 if state is None:
-                    return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "introSlice": "", "taskDescription": ""})
+                    return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "introSlice": "", "taskProblem": "", "taskDescription": ""})
                 return jsonify({"status": "success", "message": "Login successfully", "preload": True, "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "introSlice": state["introSlice"], "taskProblem": "", "taskDescription": ""})
             # return existing user
             return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "introSlice":"", "taskProblem": "", "taskDescription": ""})
