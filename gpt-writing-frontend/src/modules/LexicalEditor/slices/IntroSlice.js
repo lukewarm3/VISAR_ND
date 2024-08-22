@@ -10,66 +10,66 @@ const initialState = {
     {
       title: "Welcome to VISAR! 👋",
       intro:
-        "A human-AI collaboration system to support argumentative writing plan.",
+        "VISAR is a Human-AI co-creative writing tool that assists with argumentative writing.",
     },
     // 1
-    { element: ".toolbar-wrapper", intro: "This is the toolbar." },
+    { element: ".toolbar-wrapper", intro: "Throughout the writing process, you'll use this toolbar to edit text, save/load drafts, and configure the view of the app." },
     // 2
     {
       element: ".toolbar",
-      intro: "These are the common tools used to edit text.",
+      intro: "Over here you'll find some familiar editing tools for your text.",
     },
     // 3
     {
       element: "#save",
       intro:
-        'This is the "save draft" button. <br>Please save your draft constantly so you will not lose your progress.',
+        'This is the <em>"save draft"</em> button. <br>Please save your draft often so you won\'t lose your progress!',
     },
     // 4
     {
       element: ".toolbar-right",
-      intro: "You can open or close the mind map by clicking this.",
+      intro: "A visual representation of your outline can also be generated.  You can view this diagram by clicking on this icon.",
     },
     // 5
     {
-      title: 'Explore 🪜"Step-by-Step Goal Recommendation" feature',
+      title: 'Explore 🪜<em>"Step-by-Step Goal Recommendation"</em> feature',
       intro:
-        'Now let\'s play with VISAR to help you write, please follow the steps:<br>1. Write a topic sentence in the editor.<br>2. Select the whole sentence.<br>3. Click the Elaborate button. <br>For example, write the topic sentence "University of Notre Dame is a great university."',
+        'Now let\'s play with VISAR to help you reach your creative goals! Please follow the steps below:<br><br>1. Write a topic sentence in the editor.<br>2. Use your mouse to select and highlight the entire sentence.<br>3. Click the <b>Elaborate</b> button. <br><br>For example, write the topic sentence <em>"The University of Notre Dame is an excellent university."</em>',
     },
     // 6
     {
       element: ".elaborate-group",
       intro:
-        "Here VISAR presents you with a set of suggested key aspects to help substantiate the chosen argument. Now choose the keyword(s) you want.",
+        "Here, VISAR presents you with a set of suggested keywords to help substantiate the chosen argument. Now let's select the keyword(s) that are relevant for your argument and click <b>'GENERATE DISCUSSION POINTS'</b>",
     },
     // 7
     {
       element: "#discussion-points",
       intro:
-        'VISAR prepares specific discussion points for each chosen aspect. <br>You can choose the discussion points you are interested in and then click "SKETCH CONTENT" button.',
+        'VISAR prepares specific discussion points for each chosen keyword. <br><br>You can choose the discussion points you are interested in exploring and then click <b>"SKETCH CONTENT"</b>.',
     },
     // 8
     {
       element: "#react-flow-modal",
-      intro: "Here VISAR displays the current visual outline for review.",
+      intro: "VISAR now displays the current visual outline for your review.",
     },
     // 9
     {
       element: "#generate-button",
       intro:
-        "After reviewing and confirming the outline, you can click the generate button. VISAR will then produce the prototype write-up based on the outline.",
+        "After reviewing and confirming the suggested outline, you can click <b>'GENERATE'</b>. <br><br>VISAR will then generate a structured text argument in the text editor based on the visual outline.",
     },
     // 10
     {
       title: 'Explore ✨"Argumentative Sparks" feature',
       intro:
-        'Moreover, VISAR can suggest Argumentative Sparks for the write-ups. <br>1. Click one of the generated discussion points (yellow highlighted text).<br>2. Click "Argumentative sparks".<br>3. Then click "Counter Arguments" under the "Argumentative Sparks" menu.',
+        'Moreover, VISAR can suggest <em>Argumentative Sparks</em> from the writing. Please follow the steps below:<br><br>1. Click on one of the generated discussion points (yellow highlighted text).<br>2. Click <b>"Argumentative sparks"</b>.<br>3. Then click <b>"Counter Arguments"</b> under the <b>"Argumentative sparks"</b> menu.',
     },
     // 11
     {
       element: "#counter-argument-menu",
       intro:
-        'Select the counter argument(s) you want to implement and click "REVIEW AND SKETCH".',
+        'Select the counter argument(s) you want to implement within your text and click <b>"REVIEW AND SKETCH"</b>.',
     },
     // 12
     {
@@ -80,17 +80,17 @@ const initialState = {
     // 13
     {
       element: ".toolbar-right",
-      intro: "First, open the mind map.",
+      intro: "First, let's open the mind map by clicking on this icon.",
     },
     // 14
     {
       element: "#add-node-panel",
       intro:
-        "Then, click the button to add one node.<br><br>After adding the node, you can change the text on it and also create relationship between it and another node by dragging a line between their dots ",
+        "Then, click the <b>+</b> icon to add a node.  This node will be viewed as a part of the overall argument.<br><br>After adding the node, you can change the text on it and also create relationships between itself and another nodes by dragging a line between their dots.",
     },
     // 15
     {
-      title: 'Final step: explore 🛫"Rapid Draft Prototyping" feature',
+      title: 'One more before you go! Explore 🛫"Rapid Draft Prototyping" feature',
       intro:
         "To help you reflect on and improve your outline, VISAR can rapidly generate prototypes from the outline.",
     },
@@ -125,9 +125,9 @@ const initialState = {
     },
     // 21
     {
-      title: "Explore by yourself!",
+      title: "Explore by yourself! ⛰️",
       intro:
-        'The basic tutorial ends! However, this does not cover everything and you can try them by yourself! For example, try the "Edit" when you click the highlighted text! <br><br>Also, try to write several related arguments as separate paragraphs and select all of them, then you will unlock the "Synthesize" feature that helps you write thesis! <br><br>Enjoy!',
+        'This warps up the tutorial! Please note, this does not cover all the features, but now you have the skills to explore for yourself! Maybe try out the <b>"Edit"</b> when you click the highlighted text! <br><br>Also, maybe try to write several related arguments as separate paragraphs and select all of them, then you will unlock the <b>"Synthesize"</b> feature that helps you formulate your thesis! <br><br>Enjoy!',
     },
   ],
 };

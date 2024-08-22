@@ -1,213 +1,246 @@
 import * as React from 'react'
-import Avatar from '@mui/material/Avatar'
 import Button from '@mui/material/Button'
 import CssBaseline from '@mui/material/CssBaseline'
 import TextField from '@mui/material/TextField'
-import Radio from '@mui/material/Radio'
-import RadioGroup from '@mui/material/RadioGroup'
-import FormControlLabel from '@mui/material/FormControlLabel'
 import FormControl from '@mui/material/FormControl'
 import FormLabel from '@mui/material/FormLabel'
-import Checkbox from '@mui/material/Checkbox'
+import RadioGroup from '@mui/material/RadioGroup'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Radio from '@mui/material/Radio'
 import Link from '@mui/material/Link'
 import Grid from '@mui/material/Grid'
 import Box from '@mui/material/Box'
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import Typography from '@mui/material/Typography'
 import Container from '@mui/material/Container'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
 
-function Copyright (props) {
-  return (
-    <Typography
-      variant='body2'
-      color='text.secondary'
-      align='center'
-      {...props}
-    >
-      {'Copyright © '}
-      <Link color='inherit' href='https://mui.com/'>
-        Your Website
-      </Link>{' '}
-      {new Date().getFullYear()}
-      {'.'}
-    </Typography>
-  )
-}
+// Notre Dame colors is what I planned on using
+const ndBlue = '#0C2340'
+const ndGold = '#C99700'
 
-const theme = createTheme()
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: ndBlue,
+    },
+    secondary: {
+      main: ndGold,
+    },
+  },
+});
 
-export default function SignIn () {
-  const [cond, setCondition] = React.useState('advanced')
+export default function SignIn() {
   const [username, setUsername] = React.useState('')
   const [password, setPassword] = React.useState('')
-  const [status, setStatus] = React.useState('') // [idle, pending, resolved, rejected]
+  const [passwordError, setPasswordError] = React.useState('')
+  const [role, setRole] = React.useState('student')
+  const [isSignUp, setIsSignUp] = React.useState(false)
+  const [status, setStatus] = React.useState('idle')
   const [message, setMessage] = React.useState('')
 
   const navigate = useNavigate()
 
-  async function authenticate () {
-    const res = await fetch('http://127.0.0.1:5000/signup', {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-        "Accept": 'application/json'
-      },
-      body: JSON.stringify({
-        username: username,
-        //password: password,
-        condition: cond
-      })
-    })
-      .then(res => res.json())
-      .then(res => {
-        console.log(res)
-        setStatus(res.status)
-        setMessage(res.message)
-        let editorState = null
-        let flowSlice = null
-        let editorSlice = null
-        let introSlice = null
-        if (res.preload === true) {
-          editorState = JSON.parse(res.editorState)
-          flowSlice = JSON.parse(res.flowSlice)
-          editorSlice = JSON.parse(res.editorSlice)
-          introSlice = JSON.parse(res.introSlice)
-        }
+  const validatePassword = (password) => {
+    if (password.length < 8 || password.length > 20) {
+      return "Password must be between 8 and 20 characters long.";
+    }
+    if (!/\d/.test(password)) {
+      return "Password must contain at least one number.";
+    }
+    if (!/[a-z]/.test(password)) {
+      return "Password must contain at least one lowercase letter.";
+    }
+    if (!/[A-Z]/.test(password)) {
+      return "Password must contain at least one uppercase letter.";
+    }
+    if (!/[!@#$%^&*]/.test(password)) {
+      return "Password must contain at least one special character (!@#$%^&*).";
+    }
+    return "";
+  }
 
-        const taskProblem = res.taskProblem
-        const taskDescription = res.taskDescription
+  const handlePasswordChange = (e) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    if(isSignUp) {
+      setPasswordError(validatePassword(newPassword));
+    }
+  }
+
+  async function authenticate(e) {
+    e.preventDefault();
+    
+    if (isSignUp && passwordError) {
+      setMessage("Please fix password errors before signing up.");
+      return;
+    }
+
+    setStatus('loading');
+    setMessage('');
+
+    const endpoint = isSignUp ? 'signup' : 'login'
+    try {
+      const response = await fetch(`http://127.0.0.1:5000/${endpoint}`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+          "Accept": 'application/json'
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password,
+          role: role
+        })
+      });
+
+      const data = await response.json();
+      setStatus(data.status);
+      setMessage(data.message);
+
+      if (data.status === 'success') {
+        let editorState = null;
+        let flowSlice = null;
+        let editorSlice = null;
+        let introSlice = null;
+        if (data.preload === true) {
+          editorState = JSON.parse(data.editorState);
+          flowSlice = JSON.parse(data.flowSlice);
+          editorSlice = JSON.parse(data.editorSlice);
+          introSlice = JSON.parse(data.introSlice);
+        }
 
         const task = {
-          topic: taskProblem,
-          description: taskDescription
-        }
+          topic: data.taskProblem,
+          description: data.taskDescription
+        };
 
-        console.log('task: ', task)
+        const sessionId = Math.floor(Math.random() * 10000);
 
-        const sessionId = Math.floor(Math.random() * 10000)
-
-        if (res.status === 'success') {
+        if (data.role === 'teacher') {
+          navigate('/teacher', {
+            // Teacher will always get the dashboard option
+            state: { teacherId: data.teacherId }
+          });
+        } else {
+          // If students, just go straight to the editor
           navigate('/editor', {
-            state: {
-              condition: 'advanced',
-              username: username,
-              preload: res.preload,
-              sessionId: sessionId,
-              editorState: editorState,
-              flowSlice: flowSlice,
-              editorSlice: editorSlice,
-              introSlice: introSlice,
-              taskDescription: task
-            }
-          })
+          state: {
+            condition: role,
+            username: username,
+            role: data.role,
+            preload: data.preload,
+            sessionId: sessionId,
+            editorState: editorState,
+            flowSlice: flowSlice,
+            editorSlice: editorSlice,
+            introSlice: introSlice,
+            taskDescription: task
+          }
+        });
         }
-      })
+
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setStatus('error');
+      setMessage('An error occurred. Please try again.');
+    }
   }
 
   return (
     <ThemeProvider theme={theme}>
-      <Container component='main'>
-        <CssBaseline />
-        <Box
-          sx={{
-            marginTop: 15,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          {/* <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-            <LockOutlinedIcon />
-          </Avatar> */}
-          <Typography component='h1' variant='h5'>
-            Welcome to VISAR 👋
-          </Typography>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          backgroundColor: ndBlue,
+          backgroundImage: `linear-gradient(135deg, ${ndBlue} 25%, ${ndGold} 25%)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Container component='main' maxWidth='sm'>
+          <CssBaseline />
           <Box
             sx={{
-              mt: 2,
-              width: "35%"
+              padding: 4,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              backgroundColor: 'white',
+              borderRadius: 2,
+              boxShadow: 3,
             }}
           >
-            <TextField
-              margin='normal'
-              required
-              fullWidth
-              id='username'
-              label='Please enter a nickname'
-              value={username}
-              onFocus={() => {
-                setStatus('idle')
-                setMessage('')
-              }}
-              onChange={e => {
-                setUsername(e.target.value)
-              }}
-              autoFocus
-            />
-            {/* <TextField
-              margin='normal'
-              required
-              fullWidth
-              value={password}
-              onFocus={() => {
-                setStatus('idle')
-                setMessage('')
-              }}
-              onChange={e => {
-                setPassword(e.target.value)
-              }}
-              label='Password'
-              type='password'
-              id='password'
-              //   autoComplete="current-password"
-            /> */}
-            {/* <RadioGroup
-              aria-labelledby='condition-radio-buttons-group-label'
-              value={cond}
-              onChange={e => {
-                setCondition(e.target.value)
-              }}
-              name='radio-buttons-group'
-            >
-              <FormControlLabel
-                value='baseline'
-                control={<Radio />}
-                label='Apple version'
+            <Typography component='h1' variant='h4' sx={{ color: ndBlue, marginBottom: 3 }}>
+              Welcome to VISAR 👋
+            </Typography>
+            <Box component="form" onSubmit={authenticate} noValidate sx={{ mt: 1, width: '100%' }}>
+              <TextField
+                margin='normal'
+                required
+                fullWidth
+                id='username'
+                label='Username'
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                autoFocus
               />
-              <FormControlLabel
-                value='control'
-                control={<Radio />}
-                label='Banana version'
+              <TextField
+                margin='normal'
+                required
+                fullWidth
+                value={password}
+                onChange={handlePasswordChange}
+                label='Password'
+                type='password'
+                id='password'
+                error={!!passwordError}
+                helperText={passwordError}
               />
-              <FormControlLabel
-                value='advanced'
-                control={<Radio />}
-                label='Orange version'
-              />
-            </RadioGroup> */}
-            <Button
-              type='submit'
-              fullWidth
-              variant='contained'
-              sx={{ mt: 3, mb: 2 }}
-              onClick={authenticate}
-            >
-              Enter
-            </Button>
-            {status === 'fail' && message === 'Password incorrect' && (
-              <Typography sx={{ color: 'red' }}>Password incorrect</Typography>
-            )}
-            {status === 'fail' && message === 'User not found' && (
-              <Typography sx={{ color: 'red' }}>User not found</Typography>
-            )}
+              {isSignUp && (
+              <FormControl component="fieldset" sx={{ mt: 2, mb: 2 }}>
+                <FormLabel component="legend">Role</FormLabel>
+                <RadioGroup
+                  aria-label="role"
+                  name="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                >
+                  <FormControlLabel value="student" control={<Radio />} label="Student" />
+                  <FormControlLabel value="teacher" control={<Radio />} label="Teacher" />
+                </RadioGroup>
+              </FormControl>
+              )}
+              <Button
+                type='submit'
+                fullWidth
+                variant='contained'
+                sx={{ mt: 3, mb: 2 }}
+                disabled={isSignUp && !!passwordError || status === 'loading'}
+              >
+                {isSignUp ? 'Sign Up' : 'Sign In'}
+              </Button>
+              <Grid container justifyContent="flex-end">
+                <Grid item>
+                  <Link href="#" variant="body2" onClick={() => setIsSignUp(!isSignUp)}>
+                    {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+                  </Link>
+                </Grid>
+              </Grid>
+              {status === 'fail' && (
+                <Typography sx={{ color: 'red', mt: 2 }}>{message}</Typography>
+              )}
+              {status === 'loading' && (
+                <Typography sx={{ color: 'blue', mt: 2 }}>Loading...</Typography>
+              )}
+            </Box>
           </Box>
-        </Box>
-      </Container>
+        </Container>
+      </Box>
     </ThemeProvider>
   )
 }

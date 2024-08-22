@@ -2,16 +2,19 @@ import re
 import os
 import json
 from dotenv import load_dotenv
+from datetime import datetime
 from openai import OpenAI
 from flask import Flask, redirect, render_template, request, url_for, make_response, jsonify
 from flask_cors import CORS, cross_origin
 from pymongo import MongoClient
+from werkzeug.security import generate_password_hash, check_password_hash
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
 cors = CORS(app)
 #CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
-model_type = "gpt-3.5-turbo"
+model_type = "gpt-4o"
 tempature = 0.6
 max_tokens = 2048
 enablePreload = True # enable the preload of editor state, editor node, and flow node
@@ -29,7 +32,18 @@ mongoDB_key = os.getenv("MONGO_DB_KEY")
 client = MongoClient(mongoDB_key)
 db = client.gptwriting
 
-
+def validate_password(password):
+    if len(password) < 8 or len(password) > 20:
+        return False, "Password must be between 8 and 20 characters long."
+    if not re.search(r"\d", password):
+        return False, "Password must contain at least one number."
+    if not re.search(r"[a-z]", password):
+        return False, "Password must contain at least one lowercase letter."
+    if not re.search(r"[A-Z]", password):
+        return False, "Password must contain at least one uppercase letter."
+    if not re.search(r"[!@#$%^&*]", password):
+        return False, "Password must contain at least one special character (!@#$%^&*)."
+    return True, ""
 
 
 @app.route("/signup", methods=["POST"])
@@ -37,54 +51,137 @@ def signup():
     if request.method == "POST":
         response = request.get_json()
         username = response["username"]
-        #password = response["password"]
-        condition = response["condition"]
-        print(f"username: {username}")
+        password = response["password"]
+        role = response["role"]  # 'student' or 'teacher' are the only two roles
+        
+        # Make sure the password is correct
+        is_valid, error_message = validate_password(password)
+        if not is_valid:
+            return jsonify({"status": "fail", "message": error_message})
+        
         user = db.users.find_one({"username": username})
         if user is not None:
-            # there is no login, but "sign up" at this time
-            if enablePreload:
-                # get the states from drafe collections
-                state = db.drafts.find_one({"username": username, "sessionId": user["latestSessionId"]})
-                if state is None:
-                    return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "introSlice": "", "taskProblem": "", "taskDescription": ""})
-                return jsonify({"status": "success", "message": "Login successfully", "preload": True, "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "introSlice": state["introSlice"], "taskProblem": "", "taskDescription": ""})
-            # return existing user
-            return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "introSlice":"", "taskProblem": "", "taskDescription": ""})
-        #db.users.insert_one({"username": username, "password": password, "condition": condition, "latestSessionId": -1, "condTopicMapping": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5}})
-        db.users.insert_one({"username": username, "condition": condition, "latestSessionId": -1, "condTopicMapping": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5}})
-        print("Signup successfully")
-        return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "introSlice":"", "taskProblem": "", "taskDescription": ""})
+            return jsonify({"status": "fail", "message": "Username already exists"})
+        
+        hashed_password = generate_password_hash(password)
+        db.users.insert_one({
+            "username": username,
+            "password": hashed_password,
+            "role": role,
+            "latestSessionId": -1
+        })
+        
+        return jsonify({"status": "success", "message": "Signup successful"})
 
-# Only for user logging purpose
 @app.route("/login", methods=["POST"])
 def login():
     if request.method == "POST":
         response = request.get_json()
         username = response["username"]
         password = response["password"]
-        condition = response["condition"]
-        print(f"username: {username}, password: {password}")
+        
         user = db.users.find_one({"username": username})
         if user is None:
-            print("User not found")
             return jsonify({"status": "fail", "message": "User not found"})
-        if user["password"] != password:
-            print("Password incorrect")
+        
+        if not check_password_hash(user["password"], password):
             return jsonify({"status": "fail", "message": "Password incorrect"})
-        print("Login successfully")
-        # load state from database
+        
+        role = user["role"]
+        
+        condition = "student" if role == "student" else "teacher"
+        
+        problem = db.problemset.find_one({"condition": condition})
+        if problem is None:
+            problem = {"topic": "Default Topic", "description": "Default Description"}
+        
+        response_data = {
+            "status": "success",
+            "message": "Login successful",
+            "role": role,
+            "preload": False,
+            "editorState": "",
+            "flowSlice": "",
+            "editorSlice": "",
+            "taskProblem": problem["topic"],
+            "taskDescription": problem["description"],
+        }
 
-        topicId = user["condTopicMapping"][condition]
+        if role == "teacher":
+            response_data["teacherId"] = str(user["_id"])
+        elif user["latestSessionId"] != -1 and enablePreload:
+            state = db.drafts.find_one({"username": username, "sessionId": user["latestSessionId"]})
+            response_data.update({
+                "preload": True,
+                "editorState": state["editorState"],
+                "flowSlice": state["flowSlice"],
+                "editorSlice": state["editorSlice"],
+            })
 
-        problem = db.problemset.find_one({"id": topicId})
+        return jsonify(response_data)
+            
+@app.route("/teacher/<teacher_id>", methods=["GET"])
+def teacher_dashboard(teacher_id):
+    
+    # Primarily scaffolding once we determine what we actually want the teacher fully to do and the flow of that.
+    
+    # teacher = db.users.find_one({"id": ObjectId(teacher_id), "role": "teacher"})
+    # if not teacher:
+    #     return jsonify({"status": "fail", "message": "Teacher not found"}), 404
 
-        if user["latestSessionId"] != -1 and enablePreload:
-            state = db.drafts.find_one(
-                {"username": username, "sessionId": user["latestSessionId"]})
-            return jsonify({"status": "success", "message": "Login successfully", "preload": True, "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "taskProblem": problem["topic"], "taskDescription": problem["description"]})
-        else:
-            return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": problem["topic"], "taskDescription": problem["description"]})
+    # # Fetch students enrolled in the teacher's class
+    # students = list(db.users.find({"role": "student", "class_id": teacher["class_id"]}))
+    
+    # student_data = []
+    # for student in students:
+    #     # Fetch usage data for each student
+    #     usage_data = db.usage.find_one({"user_id": student["_id"]})
+        
+    #     student_data.append({
+    #         "id": str(student["_id"]),
+    #         "username": student["username"],
+    #         "time_spent": usage_data["total_time"] if usage_data else 0,
+    #         "login_count": usage_data["login_count"] if usage_data else 0,
+    #         "last_login": usage_data["last_login"] if usage_data else None,
+    #     })
+
+    # # Calculate aggregate metrics
+    # total_time_spent = sum(student["time_spent"] for student in student_data)
+    # avg_time_spent = total_time_spent / len(student_data) if student_data else 0
+    # total_logins = sum(student["login_count"] for student in student_data)
+
+    return jsonify({
+        "status": "success",
+        # "teacher": {
+        #     "id": str(teacher["_id"]),
+        #     "username": teacher["username"],
+        #     "class_id": teacher["class_id"]
+        # },
+        # "students": student_data,
+        # "metrics": {
+        #     "total_students": len(student_data),
+        #     "total_time_spent": total_time_spent,
+        #     "avg_time_spent": avg_time_spent,
+        #     "total_logins": total_logins
+        # }
+    })
+
+@app.route("/log_usage", methods=["POST"])
+def log_usage():
+    data = request.get_json()
+    user_id = data["user_id"]
+    time_spent = data["time_spent"]
+    
+    db.usage.update_one(
+        {"user_id": ObjectId(user_id)},
+        {
+            "$inc": {"total_time": time_spent, "login_count": 1},
+            "$set": {"last_login": datetime.now()}
+        },
+        upsert=True
+    )
+    
+    return jsonify({"status": "success", "message": "Usage logged successfully"})
 
 @app.route("/logInteractionData", methods=["POST"])
 def logInteractionData():

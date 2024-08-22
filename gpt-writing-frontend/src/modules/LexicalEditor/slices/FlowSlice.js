@@ -653,9 +653,10 @@ const flowSlice = createSlice({
           " editorNodeKey: ",
           editorNodeKey
         );
-      } else {
-        mappings[id] = undefined;
-      }
+      } 
+      // else {
+      //   mappings[id] = undefined;
+      // }
 
       return {
         ...state,
