@@ -45,17 +45,10 @@ h1 {
 }
 
 .editor-container {
-  /* margin: 20px auto 20px auto;
-  border-radius: 2px;
-  max-width: 50vw; */
+  position: relative;
   color: #000;
   max-width: 100%;
-  /* position: relative;
-  line-height: 20px;
-  font-weight: 400;
-  text-align: left;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px; */
+  z-index: 1;
 }
 
 .editor-inner {
@@ -327,14 +320,14 @@ pre::-webkit-scrollbar-thumb {
   opacity: 0;
   display: flex;
   margin-bottom: 1px;
-  background: #fff;
-  padding: 4px;
-  box-shadow: 2px 5px 10px rgba(0, 0, 0, 0.3);
+  background: white;
+  padding: 10px;
+  border: 2px solid #0c2340;
+  box-shadow: 0 4px 6px rgba(12, 35, 64, 0.3);
   border-radius: 8px;
   transition: opacity 0.5s;
   flex-direction: column;
   width: 400px;
-  padding: 10px;
 }
 
 .rewrite-button {
@@ -348,8 +341,9 @@ pre::-webkit-scrollbar-thumb {
   left: -10000px;
   opacity: 0;
   display: flex;
-  background: #fff;
-  box-shadow: 2px 5px 10px rgba(0, 0, 0, 0.3);
+  background: white;
+  border: 2px solid #0c2340;
+  box-shadow: 0 4px 6px rgba(12, 35, 64, 0.3);
   border-radius: 8px;
   transition: opacity 0.5s;
   flex-direction: column;
@@ -947,4 +941,234 @@ i.sync {
 .introjs-tooltip {
   min-width: 350px !important;
   max-width: 400px !important;
+}
+
+.toolbar-wrapper {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  background: #0c2340; /* Notre Dame Blue */
+  justify-content: space-between;
+  margin-bottom: 1px;
+}
+
+.toolbar {
+  display: flex;
+  padding: 4px;
+  vertical-align: middle;
+}
+
+.toolbar button.toolbar-item {
+  border: 0;
+  display: flex;
+  background: none;
+  border-radius: 10px;
+  padding: 8px;
+  cursor: pointer;
+  vertical-align: middle;
+  color: white;
+}
+
+.toolbar button.toolbar-item i.format {
+  background-size: contain;
+  display: inline-block;
+  height: 18px;
+  width: 18px;
+  margin-top: 2px;
+  vertical-align: -0.25em;
+  display: flex;
+  opacity: 1;
+  filter: brightness(0) invert(1); /* Makes icons white */
+}
+
+.toolbar button.toolbar-item:hover:not([disabled]) {
+  background-color: #c99700; /* Notre Dame Gold */
+}
+
+.toolbar button.toolbar-item.active {
+  background-color: rgba(201, 151, 0, 0.3); /* Semi-transparent gold */
+}
+
+.toolbar select.toolbar-item {
+  color: white;
+  background-color: transparent;
+}
+
+.toolbar .toolbar-item .text {
+  color: white;
+}
+
+.toolbar-right {
+  display: flex;
+  padding: 4px;
+  vertical-align: middle;
+  color: white;
+}
+
+.toolbar .divider {
+  background-color: rgba(255, 255, 255, 0.3); /* Semi-transparent white */
+}
+
+.toolbar select.toolbar-item {
+  color: white;
+  background-color: transparent;
+  border: none;
+  border-radius: 10px;
+  padding: 8px;
+  vertical-align: middle;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 70px;
+  font-size: 14px;
+  text-overflow: ellipsis;
+}
+
+.toolbar select.code-language {
+  text-transform: capitalize;
+  width: 130px;
+  color: white;
+}
+
+.toolbar .toolbar-item .text {
+  display: flex;
+  line-height: 20px;
+  vertical-align: middle;
+  font-size: 14px;
+  color: white;
+  text-overflow: ellipsis;
+  width: 70px;
+  overflow: hidden;
+  height: 20px;
+  text-align: left;
+}
+
+.toolbar .toolbar-item .icon {
+  display: flex;
+  width: 20px;
+  height: 20px;
+  user-select: none;
+  margin-right: 8px;
+  line-height: 16px;
+  background-size: contain;
+  filter: brightness(0) invert(1);
+}
+
+i.chevron-down {
+  background-color: transparent;
+  background-size: contain;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+  background-image: url(images/icons/chevron-down.svg);
+  filter: brightness(0) invert(1);
+}
+
+.MuiAppBar-root {
+  z-index: 1201 !important; /* Ensure AppBar stays on top */
+}
+
+.MuiDrawer-root {
+  position: fixed !important;
+  top: 64px !important; /* Match AppBar height */
+  height: calc(100% - 64px) !important;
+}
+
+/* Add these styles at the end of your CSS file */
+
+/* Style the tooltip itself */
+.introjs-tooltip {
+  background-color: white !important;
+  color: #0c2340 !important;
+  border: 2px solid #c99700 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Style the tooltip title */
+.introjs-tooltiptext {
+  color: #0c2340 !important;
+}
+
+/* Style the navigation buttons */
+.introjs-button {
+  background-color: #0c2340 !important;
+  border: none !important;
+  color: white !important;
+  text-shadow: none !important;
+  border-radius: 4px !important;
+  margin: 4px !important;
+  padding: 8px 16px !important;
+  transition: background-color 0.3s ease !important;
+}
+
+.introjs-button:hover {
+  background-color: #0a1c33 !important;
+  color: white !important;
+}
+
+/* Style the progress indicator */
+.introjs-progress {
+  background-color: rgba(201, 151, 0, 0.3) !important;
+}
+
+.introjs-progressbar {
+  background-color: #c99700 !important;
+}
+
+/* Style the bullet points */
+.introjs-bullets ul li a {
+  background-color: rgba(12, 35, 64, 0.3) !important;
+}
+
+.introjs-bullets ul li a.active {
+  background-color: #0c2340 !important;
+}
+
+/* Style the close button */
+.introjs-skipbutton {
+  color: #0c2340 !important;
+}
+
+/* Style the tooltip arrow */
+.introjs-arrow {
+  border-color: white !important;
+}
+
+/* Style the highlighted elements */
+.introjs-helperLayer {
+  border: 2px solid #0c2340 !important;
+  box-shadow: 0 2px 15px rgba(12, 35, 64, 0.4) !important;
+}
+
+/* Style for the chips inside elaborate-group */
+.elaborate-group .MuiChip-root {
+  border-color: #0c2340;
+}
+
+.elaborate-group .MuiChip-root.MuiChip-filled {
+  background-color: #0c2340;
+  color: white;
+}
+
+.elaborate-group .MuiChip-root:hover {
+  background-color: rgba(12, 35, 64, 0.1);
+}
+
+.elaborate-group .MuiChip-root.MuiChip-filled:hover {
+  background-color: #0a1c33;
+}
+
+/* Style for the buttons inside elaborate-group */
+.elaborate-group .MuiButton-contained {
+  background-color: #0c2340;
+  color: white;
+}
+
+.elaborate-group .MuiButton-contained:hover {
+  background-color: #0a1c33;
+}
+
+.elaborate-group .MuiButton-contained:disabled {
+  background-color: rgba(12, 35, 64, 0.3);
 }

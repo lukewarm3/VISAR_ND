@@ -942,152 +942,154 @@ export default function ToolbarPlugin() {
         
         <Divider />
         
-        <Tooltip title="Text Format">
-          <button
-            className="toolbar-item block-controls"
-            onClick={() => setShowBlockOptionsDropDown(!showBlockOptionsDropDown)}
-            aria-label="Formatting Options"
-          >
-            <span className={"icon block-type " + blockType} />
-            <span className="text">{blockTypeToBlockName[blockType]}</span>
-            <i className="chevron-down" />
-          </button>
-        </Tooltip>
-        {showBlockOptionsDropDown &&
-          createPortal(
-            <BlockOptionsDropdownList
-              editor={editor}
-              blockType={blockType}
-              toolbarRef={toolbarRef}
-              setShowBlockOptionsDropDown={setShowBlockOptionsDropDown}
-            />,
-            document.body
-          )}
-        
-        <Divider />
-        
-        <Tooltip title="Bold">
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
-            }}
-            className={"toolbar-item spaced " + (isBold ? "active" : "")}
-            aria-label="Format Bold"
-          >
-            <i className="format bold" />
-          </button>
-        </Tooltip>
-        
-        <Tooltip title="Italic">
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
-            }}
-            className={"toolbar-item spaced " + (isItalic ? "active" : "")}
-            aria-label="Format Italics"
-          >
-            <i className="format italic" />
-          </button>
-        </Tooltip>
-        
-        <Tooltip title="Underline">
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
-            }}
-            className={"toolbar-item spaced " + (isUnderline ? "active" : "")}
-            aria-label="Format Underline"
-          >
-            <i className="format underline" />
-          </button>
-        </Tooltip>
-        
-        <Tooltip title="Strikethrough">
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough");
-            }}
-            className={"toolbar-item spaced " + (isStrikethrough ? "active" : "")}
-            aria-label="Format Strikethrough"
-          >
-            <i className="format strikethrough" />
-          </button>
-        </Tooltip>
-        
-        <Tooltip title="Code">
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code");
-            }}
-            className={"toolbar-item spaced " + (isCode ? "active" : "")}
-            aria-label="Insert Code"
-          >
-            <i className="format code" />
-          </button>
-        </Tooltip>
-        
-        <Tooltip title="Insert Link">
-          <button
-            onClick={insertLink}
-            className={"toolbar-item spaced " + (isLink ? "active" : "")}
-            aria-label="Insert Link"
-          >
-            <i className="format link" />
-          </button>
-        </Tooltip>
-        
-        <Divider />
-        
-        <Tooltip title="Left Align">
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "left");
-            }}
-            className="toolbar-item spaced"
-            aria-label="Left Align"
-          >
-            <i className="format left-align" />
-          </button>
-        </Tooltip>
-        
-        <Tooltip title="Center Align">
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "center");
-            }}
-            className="toolbar-item spaced"
-            aria-label="Center Align"
-          >
-            <i className="format center-align" />
-          </button>
-        </Tooltip>
-        
-        <Tooltip title="Right Align">
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "right");
-            }}
-            className="toolbar-item spaced"
-            aria-label="Right Align"
-          >
-            <i className="format right-align" />
-          </button>
-        </Tooltip>
-        
-        <Tooltip title="Justify">
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "justify");
-            }}
-            className="toolbar-item"
-            aria-label="Justify Align"
-          >
-            <i className="format justify-align" />
-          </button>
-        </Tooltip>
-        
-        <Divider />
-        
+        {!mindMapOpen && (
+          <>
+            <Tooltip title="Text Format">
+              <button
+                className="toolbar-item block-controls"
+                onClick={() => setShowBlockOptionsDropDown(!showBlockOptionsDropDown)}
+                aria-label="Formatting Options"
+              >
+                <span className={"icon block-type " + blockType} />
+                <span className="text">{blockTypeToBlockName[blockType]}</span>
+                <i className="chevron-down" />
+              </button>
+            </Tooltip>
+            {showBlockOptionsDropDown &&
+              createPortal(
+                <BlockOptionsDropdownList
+                  editor={editor}
+                  blockType={blockType}
+                  toolbarRef={toolbarRef}
+                  setShowBlockOptionsDropDown={setShowBlockOptionsDropDown}
+                />,
+                document.body
+              )}
+            
+            <Divider />
+            
+            <Tooltip title="Bold">
+              <button
+                onClick={() => {
+                  editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
+                }}
+                className={"toolbar-item spaced " + (isBold ? "active" : "")}
+                aria-label="Format Bold"
+              >
+                <i className="format bold" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip title="Italic">
+              <button
+                onClick={() => {
+                  editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
+                }}
+                className={"toolbar-item spaced " + (isItalic ? "active" : "")}
+                aria-label="Format Italics"
+              >
+                <i className="format italic" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip title="Underline">
+              <button
+                onClick={() => {
+                  editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
+                }}
+                className={"toolbar-item spaced " + (isUnderline ? "active" : "")}
+                aria-label="Format Underline"
+              >
+                <i className="format underline" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip title="Strikethrough">
+              <button
+                onClick={() => {
+                  editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough");
+                }}
+                className={"toolbar-item spaced " + (isStrikethrough ? "active" : "")}
+                aria-label="Format Strikethrough"
+              >
+                <i className="format strikethrough" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip title="Code">
+              <button
+                onClick={() => {
+                  editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code");
+                }}
+                className={"toolbar-item spaced " + (isCode ? "active" : "")}
+                aria-label="Insert Code"
+              >
+                <i className="format code" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip title="Insert Link">
+              <button
+                onClick={insertLink}
+                className={"toolbar-item spaced " + (isLink ? "active" : "")}
+                aria-label="Insert Link"
+              >
+                <i className="format link" />
+              </button>
+            </Tooltip>
+            
+            <Divider />
+            
+            <Tooltip title="Left Align">
+              <button
+                onClick={() => {
+                  editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "left");
+                }}
+                className="toolbar-item spaced"
+                aria-label="Left Align"
+              >
+                <i className="format left-align" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip title="Center Align">
+              <button
+                onClick={() => {
+                  editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "center");
+                }}
+                className="toolbar-item spaced"
+                aria-label="Center Align"
+              >
+                <i className="format center-align" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip title="Right Align">
+              <button
+                onClick={() => {
+                  editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "right");
+                }}
+                className="toolbar-item spaced"
+                aria-label="Right Align"
+              >
+                <i className="format right-align" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip title="Justify">
+              <button
+                onClick={() => {
+                  editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "justify");
+                }}
+                className="toolbar-item"
+                aria-label="Justify Align"
+              >
+                <i className="format justify-align" />
+              </button>
+            </Tooltip>
+          </>
+        )}
+
         <Tooltip title="Load Draft">
           <button
             className="toolbar-item"
@@ -1146,7 +1148,7 @@ export default function ToolbarPlugin() {
             </Tooltip>
           )}
         </div>
-        {location.state?.role === 'teacher' && (
+        {location.state?.role === 'teacher' && !mindMapOpen && (
           <Tooltip title="Go to Dashboard">
             <IconButton 
               onClick={handleGoToDashboard}
@@ -1163,51 +1165,55 @@ export default function ToolbarPlugin() {
             </IconButton>
           </Tooltip>
         )}
-        <Tooltip title="Help">
-          <IconButton
-            onClick={handleReplayTutorial}
-            sx={{ 
-              ml: 1,
-              color: 'white',
-              '&:hover': {
-                backgroundColor: ndGold,
-                color: ndBlue
-              }
-            }}
-          >
-            <HelpIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Account Settings">
-          <IconButton
-            onClick={() => setAccountSettingsOpen(true)}
-            sx={{ 
-              ml: 1,
-              color: 'white',
-              '&:hover': {
-                backgroundColor: ndGold,
-                color: ndBlue
-              }
-            }}
-          >
-            <AccountCircleIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Logout">
-          <IconButton
-            onClick={handleLogout}
-            sx={{ 
-              ml: 1,
-              color: 'white',
-              '&:hover': {
-                backgroundColor: ndGold,
-                color: ndBlue
-              }
-            }}
-          >
-            <LogoutIcon />
-          </IconButton>
-        </Tooltip>
+        {!mindMapOpen && (
+          <>
+            <Tooltip title="Help">
+              <IconButton
+                onClick={handleReplayTutorial}
+                sx={{ 
+                  ml: 1,
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: ndGold,
+                    color: ndBlue
+                  }
+                }}
+              >
+                <HelpIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Account Settings">
+              <IconButton
+                onClick={() => setAccountSettingsOpen(true)}
+                sx={{ 
+                  ml: 1,
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: ndGold,
+                    color: ndBlue
+                  }
+                }}
+              >
+                <AccountCircleIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Logout">
+              <IconButton
+                onClick={handleLogout}
+                sx={{ 
+                  ml: 1,
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: ndGold,
+                    color: ndBlue
+                  }
+                }}
+              >
+                <LogoutIcon />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
         <AccountSettingsModal 
           open={accountSettingsOpen}
           onClose={() => setAccountSettingsOpen(false)}

@@ -181,6 +181,7 @@ export default function Editor() {
 
   useEffect(() => {
     if (location.state) {
+      console.log("Location state in Editor:", location.state);
       const { username, userId, sessionId, condition } = location.state;
       if (username) {
         dispatch(setUsername(username));
@@ -192,8 +193,9 @@ export default function Editor() {
         dispatch(setStudyCondition(condition));
       }
       if (location.state?.firstTimeLogin) {
-      dispatch(enableTutorial());
-    }
+        console.log("First time login detected, enabling tutorial");
+        dispatch(enableTutorial());
+      }
     }
   }, [location.state, dispatch]);
 
@@ -221,8 +223,18 @@ export default function Editor() {
   }, [location]);
 
   useEffect(() => {
+    // Add detailed logging for tutorial initialization
+    console.log("Tutorial initialization state:", {
+      firstTimeUser,
+      hasPreload: !!location.state?.preload,
+      hasIntroInstance: !!introInstance,
+      currentStep,
+      steps: steps?.length
+    });
+
     // Only initialize tutorial if we're a first-time user and not preloading state
     if (firstTimeUser && !location.state?.preload) {
+      console.log("Initializing tutorial...");
       // Ensure any existing instance is cleaned up
       if (introInstance) {
         introInstance.exit();
