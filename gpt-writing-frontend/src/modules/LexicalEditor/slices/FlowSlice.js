@@ -121,33 +121,44 @@ export const generateFromDepGraph = createAsyncThunk(
 export const generateFromSketch = createAsyncThunk(
   "flow/generateFromSketch",
   async (editor, { getState }) => {
-    const state = getState();
+    try {
+      const state = getState();
+      
+      const response = await fetch("http://127.0.0.1:5000/generateFromSketch", {
+        method: "POST",
+        mode: "cors",
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          selectedPrompts: state.flow.selectedPrompts,
+          keywords: state.flow.finalKeywords,
+          discussionPoints: state.flow.nodeData,
+          dependencyGraph: state.flow.dependencyGraph,
+        }),
+      });
 
-    const res = await fetch("http://127.0.0.1:5000/generateFromSketch", {
-      method: "POST",
-      mode: "cors",
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        selectedPrompts: state.flow.selectedPrompts,
-        keywords: state.flow.finalKeywords,
-        discussionPoints: state.flow.nodeData,
-        dependencyGraph: state.flow.dependencyGraph,
-      }),
-    }).then((res) => res.json());
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    console.log(
-      `[FlowSlice]: setCurRangeNodeKey: ${state.editor.curRangeNodeKey}`
-    );
+      const data = await response.json();
+      
+      if (!data) {
+        throw new Error('No data received from server');
+      }
 
-    return {
-      editor: editor,
-      res: res,
-      curRangeNodeKey: state.editor.curRangeNodeKey,
-    };
+      return {
+        editor: editor,
+        res: data,
+        curRangeNodeKey: state.editor.curRangeNodeKey,
+      };
+    } catch (error) {
+      console.error('Error in generateFromSketch:', error);
+      throw error;
+    }
   }
 );
 
@@ -577,7 +588,18 @@ const flowSlice = createSlice({
       const nodeKey = action.payload;
       console.log("[flow slice] editor node key is", nodeKey);
 
+      if (!state.nodeData) {
+        return state;
+      }
+
       const nodeData = JSON.parse(JSON.stringify(state.nodeData));
+
+      if (!state.flowEditorNodeMapping) {
+        return {
+          ...state,
+          nodeData
+        };
+      }
 
       let flowKey = "";
       for (const [key, value] of Object.entries(state.flowEditorNodeMapping)) {
@@ -586,11 +608,13 @@ const flowSlice = createSlice({
         }
       }
 
-      for (const [key, value] of Object.entries(nodeData)) {
-        if (key === flowKey) {
-          value.selected = true;
-        } else {
-          value.selected = false;
+      if (nodeData && flowKey) {
+        for (const [key, value] of Object.entries(nodeData)) {
+          if (key === flowKey) {
+            value.selected = true;
+          } else {
+            value.selected = false;
+          }
         }
       }
 
@@ -806,36 +830,30 @@ const flowSlice = createSlice({
       };
     },
     loadNodes(state, action) {
-      // init nodes from the selected discussion points
-      const {
-        selectedText, // the native selection text
-        selectedKeywords, // selected generated key word
-        discussionPoints, // selected generated discussion points
-        curRangeNodeKey, // selected editor text node in the paragraph (set in the FloatingMenu.js)
-      } = action.payload;
+      const { selectedText, selectedKeywords, discussionPoints, curRangeNodeKey } = action.payload;
+      
+      // Validate inputs
+      if (!selectedText || !selectedKeywords || !discussionPoints) {
+        console.error('Missing required data in loadNodes');
+        return state;
+      }
+
       let new_nodes = [...state.nodes];
       let new_edges = [...state.edges];
+      let nodeData = { ...state.nodeData };
+      let edgeData = { ...state.edgeData };
       const node_width = 300;
       const node_height = 100;
       const maxWidth = 500;
-      let dependencyGraph = JSON.parse(JSON.stringify(state.dependencyGraph));
+      let dependencyGraph = { ...state.dependencyGraph };
       const randId = Math.floor(Math.random() * 1000);
-      const flowEditorNodeMapping = JSON.parse(
-        JSON.stringify(state.flowEditorNodeMapping)
-      );
+      const flowEditorNodeMapping = { ...state.flowEditorNodeMapping };
 
-      let nodeData = JSON.parse(JSON.stringify(state.nodeData));
-      let edgeData = JSON.parse(JSON.stringify(state.edgeData));
-
-      let keyPointMappings = {}; // {keyword: [prompt1, prompt2, ...]}
-      selectedKeywords.map((k, index) => {
-        keyPointMappings[k] = discussionPoints.filter(
-          (r) => r["keyword"] === k
-        );
+      // Create keypoint mappings
+      const keyPointMappings = {};
+      selectedKeywords.forEach((k) => {
+        keyPointMappings[k] = discussionPoints.filter((p) => p.keyword === k);
       });
-
-      const init_x = 150;
-      const init_y = 150;
 
       let root_key = null; // this is the React Flow Node key correspondes to the current selected Editor Text Node
       for (const [key, value] of Object.entries(flowEditorNodeMapping)) {
@@ -875,7 +893,7 @@ const flowSlice = createSlice({
           id: root_key,
           label: selectedText,
           type: "A",
-          pos: { init_x, init_y },
+          pos: { init_x: 150, init_y: 150 },
           isNewAdded: true,
         };
 
@@ -883,7 +901,7 @@ const flowSlice = createSlice({
           id: root_key,
           type: "customNode",
           data: { label: selectedText },
-          position: { x: init_x, y: init_y },
+          position: { x: 150, y: 150 },
           style: {
             minWidth: node_width,
             minHeight: node_height,

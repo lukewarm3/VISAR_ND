@@ -34,6 +34,7 @@ const initialState = {
   isReactFlowInModal: false,
   isRangeMode: false,
   taskDescription: null,
+  drafts: []
 };
 
 export const generateRewrite = createAsyncThunk(
@@ -503,6 +504,9 @@ const editorSlice = createSlice({
         selectedSupportingArguments: copy,
       };
     },
+    setDrafts(state, action) {
+      state.drafts = action.payload;
+    },
   },
   extraReducers: {
     [generateRewrite.fulfilled]: (state, action) => {
@@ -565,6 +569,7 @@ export const {
   setIsReactFlowInModal,
   setRangeGenerationMode,
   setTaskDescription,
+  setDrafts,
 } = editorSlice.actions;
 
 export default editorSlice.reducer;

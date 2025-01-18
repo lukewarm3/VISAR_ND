@@ -153,6 +153,7 @@ const introSlice = createSlice({
     },
     enableTutorial: (state) => {
       state.firstTimeUser = true;
+      state.currentStep = 0;
     },
     disableTutorial: (state) => {
       state.firstTimeUser = false;
@@ -163,6 +164,15 @@ const introSlice = createSlice({
     setIntroInstance: (state, action) => {
       state.introInstance = action.payload;
     },
+    replayTutorial: (state) => {
+      if (state.introInstance) {
+        state.introInstance.exit();
+      }
+      state.firstTimeUser = true;
+      state.currentStep = 0;
+      state.introInstance = null;
+      localStorage.removeItem('tutorialCompleted');
+    },
   },
 });
 
@@ -172,6 +182,7 @@ export const {
   disableTutorial,
   setCurrentStep,
   setIntroInstance,
+  replayTutorial,
 } = introSlice.actions;
 
 export default introSlice.reducer;

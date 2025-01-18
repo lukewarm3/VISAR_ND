@@ -71,25 +71,29 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import LoadEditorStatePlugin from "./plugins/LoadEditorStatePlugin";
 import introJs from "intro.js";
 import "intro.js/introjs.css";
-import { disableTutorial, setCurrentStep, setFirstTimeUser, setIntroInstance, setIntroSliceStates } from "./slices/IntroSlice";
+import { disableTutorial, setCurrentStep, setFirstTimeUser, setIntroInstance, setIntroSliceStates, enableTutorial } from "./slices/IntroSlice";
 import ReactFlowHistoryPlugin from "./plugins/ReactFlowHistoryPlugin";
+import AccountSettingsModal from '../../components/AccountSettingsModal';
 
 function Placeholder() {
   return <div className="editor-placeholder">Enter some rich text...</div>;
 }
 
-const drawerWidth = "50%";
+// Same Notre Dame colors...could probably just make this part of the global theme
+const ndBlue = '#0C2340';
+const ndGold = '#C99700';
+
+const drawerWidth = "45%";
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open }) => ({
     flexGrow: 1,
-    // padding: theme.spacing(3),
+    position: 'relative',
     transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
     marginTop: "46px",
-    // marginRight: -drawerWidth,
     ...(open && {
       transition: theme.transitions.create("margin", {
         easing: theme.transitions.easing.easeOut,
@@ -107,8 +111,8 @@ const AppBar = styled(MuiAppBar, {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  height: "46px",
-  backgroundColor: "#fff",
+  backgroundColor: ndBlue,
+  zIndex: theme.zIndex.drawer + 1,
   ...(open && {
     width: `calc(100% - ${drawerWidth})`,
     marginRight: `${drawerWidth}`,
@@ -170,6 +174,28 @@ export default function Editor() {
   const currentStep = useSelector((state) => state.intro.currentStep);
   const steps = useSelector((state) => state.intro.steps);
   const updateModalOpen = useSelector((state) => state.editor.updateModalOpen);
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
+  const [sessionStart, setSessionStart] = useState(null);
+  const [activeTime, setActiveTime] = useState(0);
+  const [idleTimeout, setIdleTimeout] = useState(null);
+
+  useEffect(() => {
+    if (location.state) {
+      const { username, userId, sessionId, condition } = location.state;
+      if (username) {
+        dispatch(setUsername(username));
+      }
+      if (sessionId) {
+        dispatch(setSessionId(sessionId));
+      }
+      if (condition) {
+        dispatch(setStudyCondition(condition));
+      }
+      if (location.state?.firstTimeLogin) {
+      dispatch(enableTutorial());
+    }
+    }
+  }, [location.state, dispatch]);
 
   useEffect(() => {
     console.log("set condition", location.state.condition);
@@ -177,7 +203,7 @@ export default function Editor() {
       location.state.condition !== null &&
       location.state.condition !== undefined
     ) {
-      dispatch(setStudyCondition(location.state.condition));
+      dispatch(setStudyCondition('advanced'));
       dispatch(setUsername(location.state.username));
       dispatch(setSessionId(location.state.sessionId));
       dispatch(setTaskDescription(location.state.taskDescription));
@@ -188,48 +214,193 @@ export default function Editor() {
         dispatch(setEditorSliceStates(location.state.editorSlice));
         dispatch(setFlowSliceStates(location.state.flowSlice));
         dispatch(clearUnusedNodeAndEdge())
-        dispatch(setIntroSliceStates(location.state.introSlice)) // not the first time user
+        dispatch(setIntroSliceStates(location.state.introSlice))
         setEditorState(location.state.editorState);
       }
     }
   }, [location]);
 
   useEffect(() => {
-    if (firstTimeUser) {
+    // Only initialize tutorial if we're a first-time user and not preloading state
+    if (firstTimeUser && !location.state?.preload) {
+      // Ensure any existing instance is cleaned up
+      if (introInstance) {
+        introInstance.exit();
+      }
+
       if (currentStep === 0) {
         const intro = introJs.tour();
-
         intro.setOptions({
           disableInteraction: true,
           steps: steps.slice(0, 6),
           tooltipClass: "customTooltip",
+          exitOnOverlayClick: false,
+          exitOnEsc: false,
+          showStepNumbers: true,
+          tooltipPosition: 'auto',
+          positionPrecedence: ['bottom', 'top', 'right', 'left'],
+          showProgress: true,
+          overlayOpacity: 0.8,
+          dontShowAgain: false,
+          scrollToElement: true,
+          scrollPadding: 50
         });
 
-        // intro.onBeforeExit((nextStepIndex) => {
-        //   return window.confirm("Are you sure you want to end the tutorial?");
-        // });
+        intro.oncomplete(() => {
+          dispatch(disableTutorial());
+          localStorage.setItem('tutorialCompleted', 'true');
+        });
 
-        intro.start();
+        intro.onexit(() => {
+          if (currentStep !== 5) {
+            dispatch(disableTutorial());
+            localStorage.setItem('tutorialCompleted', 'true');
+          }
+        });
 
-        dispatch(setIntroInstance(intro));
-        //intro.exit()
-      } else if (currentStep === 5 && !updateModalOpen) {
+        // Small delay to ensure DOM is ready
         setTimeout(() => {
+          intro.start();
+          dispatch(setIntroInstance(intro));
+        }, 100);
+
+      } else if (currentStep === 5 && !updateModalOpen) {
+        if (introInstance) {
           dispatch(setCurrentStep(6));
           introInstance.setOptions({
             disableInteraction: true,
             steps: steps.slice(21, 22),
           });
-  
           introInstance.start();
-        }, 500);
-
-        introInstance.exit()
-        dispatch(disableTutorial())
+        }
+        dispatch(disableTutorial());
       }
     }
-  }, [firstTimeUser, currentStep, updateModalOpen]);
 
+    return () => {
+      if (introInstance) {
+        introInstance.exit();
+      }
+    };
+  }, [firstTimeUser, currentStep, updateModalOpen, location.state?.preload]);
+
+  // Track session start and end
+  useEffect(() => {
+    const startTime = new Date();
+    setSessionStart(startTime);
+    
+    return () => {
+      const endTime = new Date();
+      const duration = endTime - startTime;
+      
+      // Log session data
+      fetch('http://127.0.0.1:5000/log_session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: location.state?.userId,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          duration: duration,
+          active_time: activeTime
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status !== "success") {
+          console.error("Failed to log session:", data.message);
+        }
+      })
+      .catch(err => {
+        console.error("Error logging session:", err);
+      });
+    };
+  }, [location.state?.userId]); // Add dependencies
+
+  // Track active time
+  useEffect(() => {
+    let timeoutId;
+    let lastActivity = Date.now();
+    
+    const updateActiveTime = () => {
+      const now = Date.now();
+      const timeSinceLastActivity = now - lastActivity;
+      
+      // Only count time if less than 1 minute has passed
+      if (timeSinceLastActivity < 60000) {
+        setActiveTime(prev => prev + timeSinceLastActivity);
+      }
+      
+      lastActivity = now;
+    };
+
+    const resetIdleTimer = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        updateActiveTime();
+      }
+      
+      timeoutId = setTimeout(() => {
+        // User considered idle after 1 minute
+        updateActiveTime();
+      }, 60000);
+    };
+
+    window.addEventListener('mousemove', resetIdleTimer);
+    window.addEventListener('keypress', resetIdleTimer);
+    window.addEventListener('click', resetIdleTimer);
+    
+    // Start initial timer
+    resetIdleTimer();
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        updateActiveTime();
+      }
+      window.removeEventListener('mousemove', resetIdleTimer);
+      window.removeEventListener('keypress', resetIdleTimer);
+      window.removeEventListener('click', resetIdleTimer);
+    };
+  }, []); // Empty dependency array since we're using refs
+
+  useEffect(() => {
+    if (location.state?.sessionId) {
+      dispatch(setSessionId(location.state.sessionId));
+    } else {
+      // Generate a new session ID if none exists
+      const newSessionId = Date.now().toString();
+      dispatch(setSessionId(newSessionId));
+    }
+  }, []);
+
+  const handleSaveEssay = async (content) => {
+    await fetch('http://127.0.0.1:5000/log_essay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_id: location.state?.userId,
+        title: "Essay Title", // Get this from your state
+        content: content,
+        keywords: [], // Get this from your state
+        status: "completed"
+      })
+    });
+  };
+
+  const logInteraction = async (type, data) => {
+    await fetch('http://127.0.0.1:5000/logInteractionData', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: location.state?.username,
+        sessionId: location.state?.sessionId,
+        type: type,  // Make sure to use specific types for GPT interactions
+        interactionData: data
+      })
+    });
+  };
+  
   return (
     <Box>
       {/* <Steps
@@ -394,7 +565,16 @@ export default function Editor() {
         <FixWeaknessModal />
         <UpdateModal />
         <ManualAddNodeModal />
-        <SaveModal />
+        <SaveModal 
+          onSave={handleSaveEssay}
+        />
+        <AccountSettingsModal 
+          open={accountSettingsOpen}
+          onClose={() => setAccountSettingsOpen(false)}
+          userId={location.state?.userId}
+          role={location.state?.role}
+          username={location.state?.username}
+        />
       </LexicalComposer>
     </Box>
   );

@@ -235,7 +235,18 @@ export default function ElaborateFLoatingGroup({ editor }) {
 
   const elaborateByGPT = useCallback(() => {
     const selection = $getSelection();
+    
+    if (!selection) {
+      console.warn('No selection found');
+      return;
+    }
+    
     const selected_text = selection.getTextContent();
+    if (!selected_text) {
+      console.warn('No text content in selection');
+      return;
+    }
+
     if ($isRangeSelection(selection)) {
       console.log(`selection: ${selected_text}`);
 
@@ -258,32 +269,30 @@ export default function ElaborateFLoatingGroup({ editor }) {
           let text = res["response"].trim();
 
           editor.update(() => {
-            // replace \n with space
-
             text = text.replace(/\\n/g, " ");
             text = " " + text;
 
-            // // Create a new TextNode
             const newTextNode = $createTextNode(text);
-            // console.log(`new text node key: ${newTextNode.getKey()}`)
 
-            //   // Append the text node to the paragraph
-            //   paragraphNode.append(textNode);
-
-            //   // Finally, append the paragraph to the root
-            //   root.append(paragraphNode);
-
-            // selection.insertText(selected_text + " " + text + " ");
             const curTextNode = selection.getNodes()[0];
+            if (!curTextNode) {
+              console.warn('No current text node found');
+              return;
+            }
+
             const parent_key = curTextNode.getParentKeys()[0];
-            var parent = $getNodeByKey(parent_key);
+            const parent = $getNodeByKey(parent_key);
+            
             if ($isParagraphNode(parent)) {
               parent.append(newTextNode);
-              // console.log(`paragraph children: ${parent.getChildren()}}`)
               addDependency(curTextNode, newTextNode, "elaboratedBy");
             }
           });
 
+          editor.dispatchCommand(SHOW_LOADING_COMMAND, { show: false });
+        })
+        .catch(error => {
+          console.error('Error in elaborateByGPT:', error);
           editor.dispatchCommand(SHOW_LOADING_COMMAND, { show: false });
         });
     } else {
@@ -342,10 +351,25 @@ export default function ElaborateFLoatingGroup({ editor }) {
         () => {
           const selection = $getSelection();
           setElaborate(false);
+          
+          if (!selection) {
+            console.warn('[SELECTION_CHANGE_COMMAND] No selection found');
+            return false;
+          }
+
+          const nodes = selection.getNodes();
+          if (!nodes || nodes.length === 0) {
+            console.warn('[SELECTION_CHANGE_COMMAND] No nodes in selection');
+            return false;
+          }
+
           setPromptedText(selection.getTextContent());
-          const selectedNodeKey = selection.getNodes()[0].__key;
-          dispatch(setCurRangeNodeKey(selectedNodeKey));
-          dispatch(setNodeSelected(selectedNodeKey));
+          const selectedNodeKey = nodes[0].__key;
+          if (selectedNodeKey) {
+            dispatch(setCurRangeNodeKey(selectedNodeKey));
+            dispatch(setNodeSelected(selectedNodeKey));
+          }
+          
           return false;
         },
         highPriority
@@ -394,18 +418,24 @@ export default function ElaborateFLoatingGroup({ editor }) {
   // };
 
   const handleContentSketchingClicked = (e) => {
+    // Validate data before dispatch
+    if (!promptedText || !selectedKeywords || !selectedPrompts) {
+      console.error('Missing required data for content sketching');
+      return;
+    }
+
     dispatch(
       loadNodes({
-        selectedText: promptedText,
-        selectedKeywords: selectedKeywords,
-        discussionPoints: selectedPrompts,
+        selectedText: promptedText || '',
+        selectedKeywords: selectedKeywords || [],
+        discussionPoints: selectedPrompts || [],
         curRangeNodeKey: curRangeNodeKey,
       })
     );
-    // curRangeNodeKey is the selected text node in the paragraph
+    
     dispatch(setFlowModalOpen());
-    dispatch(setRangeGenerationMode(true)); //
-    positionFloatingButton(buttonRef.current, null); // hide the floating button (the second parameter is null)
+    dispatch(setRangeGenerationMode(true));
+    positionFloatingButton(buttonRef.current, null);
     dispatch(setPromptStatus("empty"));
     dispatch(setIsReactFlowInModal());
   };
@@ -444,7 +474,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
         </Box>
       ) : (
         <Box>
-          <Typography sx={{ mb: 2 }}>
+          <Typography sx={{ mb: 2, color: '#0c2340' }}>
             Please select the keywords to explore:
           </Typography>
           <Grid
@@ -469,17 +499,30 @@ export default function ElaborateFLoatingGroup({ editor }) {
                     alignItems: "center",
                   }}
                 >
-                  <Tooltip title={r} key={index}>
-                    <Chip
-                      key={index}
-                      label={r}
-                      onClick={() => handleChipClick(r)}
-                      color="primary"
-                      variant={
-                        selectedKeywords.includes(r) ? "filled" : "outlined"
+                  <Chip
+                    key={index}
+                    label={r.replace(/\*\*/g, '')}
+                    onClick={() => handleChipClick(r)}
+                    color="primary"
+                    variant={selectedKeywords.includes(r) ? "filled" : "outlined"}
+                    sx={{
+                      '& .MuiChip-label': {
+                        color: '#0c2340'
+                      },
+                      '&.MuiChip-outlined': {
+                        borderColor: '#0c2340',
+                        '& .MuiChip-label': {
+                          color: '#0c2340'
+                        }
+                      },
+                      '&.MuiChip-filled': {
+                        backgroundColor: '#0c2340',
+                        '& .MuiChip-label': {
+                          color: 'white'
+                        }
                       }
-                    />
-                  </Tooltip>
+                    }}
+                  />
                 </Grid>
               );
             })}
@@ -531,7 +574,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
             </Box>
           ) : (
             <Box id="discussion-points">
-              <Typography sx={{ mb: 2, mt: 2 }}>
+              <Typography sx={{ mb: 2, mt: 2, color: '#0c2340' }}>
                 Potential discussion points:
               </Typography>
               <Box>
@@ -541,9 +584,15 @@ export default function ElaborateFLoatingGroup({ editor }) {
                     onChange={handleTabChange}
                     scrollButtons="auto"
                     variant="scrollable"
+                    sx={{
+                      '& .MuiTabs-indicator': {
+                        backgroundColor: '#0c2340',
+                        color: '#0c2340'
+                      },
+                    }}
                   >
                     {selectedKeywords.map((r, index) => {
-                      return <Tab key={index} label={r} color="primary" />;
+                      return <Tab key={index} label={r.replace(/\*\*/g, '')} color="primary" />;
                     })}
                   </Tabs>
                 </Box>
@@ -566,23 +615,38 @@ export default function ElaborateFLoatingGroup({ editor }) {
                                   index < page * itemPerPage
                                 ) {
                                   return (
-                                    <Tooltip title={p["prompt"]} key={index}>
-                                      <Chip
-                                        key={index}
-                                        label={p["prompt"]}
-                                        onClick={() =>
-                                          dispatch(
-                                            handleSelectedPromptsChanged(p)
-                                          )
-                                        }
-                                        color="primary"
-                                        variant={
-                                          selectedPrompts.includes(p)
-                                            ? "primary"
-                                            : "outlined"
-                                        }
-                                      />
-                                    </Tooltip>
+                                    <Chip
+                                      key={index}
+                                      label={p["prompt"].replace(/\*\*/g, '')}
+                                      onClick={() =>
+                                        dispatch(
+                                          handleSelectedPromptsChanged(p)
+                                        )
+                                      }
+                                      color="primary"
+                                      variant={
+                                        selectedPrompts.includes(p)
+                                          ? "filled"
+                                          : "outlined"
+                                      }
+                                      sx={{
+                      '& .MuiChip-label': {
+                        color: '#0c2340'
+                      },
+                      '&.MuiChip-outlined': {
+                        borderColor: '#0c2340',
+                        '& .MuiChip-label': {
+                          color: '#0c2340'
+                        }
+                      },
+                      '&.MuiChip-filled': {
+                        backgroundColor: '#0c2340',
+                        '& .MuiChip-label': {
+                          color: 'white'
+                        }
+                      }
+                    }}
+                                    />
                                   );
                                 }
                               })}

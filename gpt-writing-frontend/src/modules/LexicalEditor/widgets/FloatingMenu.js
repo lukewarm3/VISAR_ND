@@ -83,7 +83,7 @@ export function FloatingMenu({ editor }) {
 
   // callback updating floating button position
   const updateFloatingButton = useCallback(() => {
-    // console.log("updateFloatingButton was called")
+    console.log("updateFloatingButton was called")
 
     const selection = $getSelection();
     const buttonElem = buttonRef.current;

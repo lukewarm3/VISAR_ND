@@ -2,7 +2,7 @@ import re
 import os
 import json
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone
 from openai import OpenAI
 from flask import Flask, redirect, render_template, request, url_for, make_response, jsonify
 from flask_cors import CORS, cross_origin
@@ -31,6 +31,7 @@ mongoDB_key = os.getenv("MONGO_DB_KEY")
 
 client = MongoClient(mongoDB_key)
 db = client.gptwriting
+db.classes.create_index("class_number", unique=True)
 
 def validate_password(password):
     if len(password) < 8 or len(password) > 20:
@@ -52,9 +53,16 @@ def signup():
         response = request.get_json()
         username = response["username"]
         password = response["password"]
-        role = response["role"]  # 'student' or 'teacher' are the only two roles
+        role = response["role"]
+        full_name = response.get("full_name", "")
+        signup_code = response.get("signup_code")
         
-        # Make sure the password is correct
+        # Add class registration for students
+        if role == "student" and signup_code:
+            class_exists = db.classes.find_one({"class_number": signup_code})
+            if not class_exists:
+                return jsonify({"status": "fail", "message": "Invalid class code"})
+        
         is_valid, error_message = validate_password(password)
         if not is_valid:
             return jsonify({"status": "fail", "message": error_message})
@@ -63,15 +71,32 @@ def signup():
         if user is not None:
             return jsonify({"status": "fail", "message": "Username already exists"})
         
+        user_id = ObjectId()
         hashed_password = generate_password_hash(password)
-        db.users.insert_one({
+        user_data = {
+            "_id": user_id,
             "username": username,
             "password": hashed_password,
             "role": role,
-            "latestSessionId": -1
-        })
+            "full_name": full_name,
+            "latestSessionId": -1,
+            "created_at": datetime.now()
+        }
         
-        return jsonify({"status": "success", "message": "Signup successful"})
+        # Add class reference for students
+        if role == "student" and signup_code:
+            user_data["class_id"] = class_exists["_id"]
+        
+        db.users.insert_one(user_data)
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Signup successful",
+            "userId": str(user_id),
+            "role": role,
+            "teacherId": str(user_id) if role == "teacher" else None,
+            "firstTimeLogin": True
+        })
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -89,81 +114,132 @@ def login():
         
         role = user["role"]
         
-        condition = "student" if role == "student" else "teacher"
-        
-        problem = db.problemset.find_one({"condition": condition})
-        if problem is None:
-            problem = {"topic": "Default Topic", "description": "Default Description"}
-        
         response_data = {
             "status": "success",
             "message": "Login successful",
-            "role": role,
+            "role": user["role"],
+            "userId": str(user["_id"]),
+            "username": user["username"],
+            "condition": "advanced",
             "preload": False,
             "editorState": "",
             "flowSlice": "",
             "editorSlice": "",
-            "taskProblem": problem["topic"],
-            "taskDescription": problem["description"],
+            "firstTimeLogin": False
         }
 
         if role == "teacher":
             response_data["teacherId"] = str(user["_id"])
         elif user["latestSessionId"] != -1 and enablePreload:
             state = db.drafts.find_one({"username": username, "sessionId": user["latestSessionId"]})
-            response_data.update({
-                "preload": True,
-                "editorState": state["editorState"],
-                "flowSlice": state["flowSlice"],
-                "editorSlice": state["editorSlice"],
-            })
+            if state:  # Only update if state exists
+                response_data.update({
+                    "preload": True,
+                    "editorState": state["editorState"],
+                    "flowSlice": state["flowSlice"],
+                    "editorSlice": state["editorSlice"],
+                })
+
+        # Update last_active timestamp
+        db.users.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"last_active": datetime.now(timezone.utc)}}
+        )
 
         return jsonify(response_data)
             
 @app.route("/teacher/<teacher_id>", methods=["GET"])
 def teacher_dashboard(teacher_id):
-    
-    # Primarily scaffolding once we determine what we actually want the teacher fully to do and the flow of that.
-    
-    # teacher = db.users.find_one({"id": ObjectId(teacher_id), "role": "teacher"})
-    # if not teacher:
-    #     return jsonify({"status": "fail", "message": "Teacher not found"}), 404
+    class_id = request.args.get('class_id')
+    teacher = db.users.find_one({"_id": ObjectId(teacher_id), "role": "teacher"})
+    if not teacher:
+        return jsonify({"status": "fail", "message": "Teacher not found"}), 404
 
-    # # Fetch students enrolled in the teacher's class
-    # students = list(db.users.find({"role": "student", "class_id": teacher["class_id"]}))
-    
-    # student_data = []
-    # for student in students:
-    #     # Fetch usage data for each student
-    #     usage_data = db.usage.find_one({"user_id": student["_id"]})
+    # Get all classes for this teacher
+    if class_id:
+        # If class_id is provided, only get students from that class
+        students = list(db.users.find({
+            "class_id": ObjectId(class_id),
+            "role": "student"
+        }))
+    else:
+        # Get all classes for this teacher
+        teacher_classes = list(db.classes.find({"teacher_id": ObjectId(teacher_id)}))
+        class_ids = [c["_id"] for c in teacher_classes]
         
-    #     student_data.append({
-    #         "id": str(student["_id"]),
-    #         "username": student["username"],
-    #         "time_spent": usage_data["total_time"] if usage_data else 0,
-    #         "login_count": usage_data["login_count"] if usage_data else 0,
-    #         "last_login": usage_data["last_login"] if usage_data else None,
-    #     })
+        # Get all students in these classes
+        students = list(db.users.find({
+            "class_id": {"$in": class_ids},
+            "role": "student"
+        }))
 
-    # # Calculate aggregate metrics
-    # total_time_spent = sum(student["time_spent"] for student in student_data)
-    # avg_time_spent = total_time_spent / len(student_data) if student_data else 0
-    # total_logins = sum(student["login_count"] for student in student_data)
+    student_metrics = []
+    total_essays = 0
+    total_words = 0
+    total_interactions = 0
+    total_students = 0
+    
+    for student in students:
+        # Get drafts using the same query as /drafts endpoint
+        drafts = list(db.drafts.find({"username": student["username"]}))
+        draft_count = len(drafts)
+        
+        # Calculate total words from drafts
+        draft_total_words = sum(len(draft.get("draft", "").split()) 
+                              for draft in drafts 
+                              if draft.get("draft"))
+        
+        # Get session metrics - convert to milliseconds for frontend
+        sessions = list(db.sessions.find({"student_id": student["_id"]}))
+        last_active = max((session.get("end_time") for session in sessions), default=None)
+        
+        
+        total_time = sum(
+            session.get("duration", 0) 
+            for session in sessions 
+            if isinstance(session.get("duration"), (int, float))
+        )
+         
+        if last_active.tzinfo is None:
+            last_active = last_active.replace(tzinfo=timezone.utc)
+        last_active = last_active.isoformat()
+        
+        # Get GPT interactions
+        gpt_interactions = db.interactionData.count_documents({
+            "username": student["username"]
+        })
+        
+        student_metrics.append({
+            "id": str(student["_id"]),
+            "username": student["username"],
+            "draft_count": draft_count,
+            "total_words": draft_total_words,
+            "total_time": total_time,
+            "last_active": last_active,
+            "full_name": student["full_name"],
+            "gpt_interactions": gpt_interactions
+        })
+        
+        # Update aggregates
+        total_students += 1
+        total_essays += draft_count
+        total_words += draft_total_words
+        total_interactions += gpt_interactions
 
     return jsonify({
         "status": "success",
-        # "teacher": {
-        #     "id": str(teacher["_id"]),
-        #     "username": teacher["username"],
-        #     "class_id": teacher["class_id"]
-        # },
-        # "students": student_data,
-        # "metrics": {
-        #     "total_students": len(student_data),
-        #     "total_time_spent": total_time_spent,
-        #     "avg_time_spent": avg_time_spent,
-        #     "total_logins": total_logins
-        # }
+        "teacher": {
+            "id": str(teacher["_id"]),
+            "username": teacher["username"],
+            "full_name": teacher["full_name"]
+        },
+        "students": student_metrics,
+        "aggregate_metrics": {
+            "total_essays": total_essays,
+            "avg_words_per_essay": total_words / total_essays if total_essays > 0 else 0,
+            "total_interactions": total_interactions,
+            "total_students": total_students
+        }
     })
 
 @app.route("/log_usage", methods=["POST"])
@@ -183,6 +259,36 @@ def log_usage():
     
     return jsonify({"status": "success", "message": "Usage logged successfully"})
 
+@app.route("/log_session", methods=["POST"])
+def log_session():
+    data = request.get_json()
+    session = {
+        "student_id": ObjectId(data["student_id"]),
+        "start_time": datetime.fromisoformat(data["start_time"]),
+        "end_time": datetime.fromisoformat(data["end_time"]),
+        "duration": data["duration"],
+        "active_time": data["active_time"],
+        "idle_time": data["duration"] - data["active_time"]
+    }
+    db.sessions.insert_one(session)
+    return jsonify({"status": "success"})
+
+@app.route("/log_essay", methods=["POST"])
+def log_essay():
+    data = request.get_json()
+    essay = {
+        "student_id": ObjectId(data["student_id"]),
+        "title": data["title"],
+        "content": data["content"],
+        "keywords": data["keywords"],
+        "word_count": len(data["content"].split()),
+        "completion_status": data["status"],
+        "created_at": datetime.now(),
+        "updated_at": datetime.now()
+    }
+    db.essays.insert_one(essay)
+    return jsonify({"status": "success"})
+
 @app.route("/logInteractionData", methods=["POST"])
 def logInteractionData():
     if request.method == "POST":
@@ -196,46 +302,78 @@ def logInteractionData():
         return jsonify({"status": "success", "message": "Interaction data logged successfully"})
 
 @app.route("/loadDraft", methods=["POST"])
-def loadDraft():
-    if request.method == "POST":
-        response = request.get_json()
-        username = response["username"]
-        user = db.users.find_one({"username": username})
-        if user is not None:
-            sessionId = user["latestSessionId"]
-            state = db.drafts.find_one(
-                {"username": username, "sessionId": sessionId})
-            if state is None:
-                print("Draft not found")
-                return jsonify({"status": "fail", "message": "Draft not found"})
-            print("Draft loaded successfully")
-            return jsonify({"status": "success", "message": "Draft loaded successfully", "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "introSlice":state["introSlice"]})
-        else:
-            print("User not found")
-            return jsonify({"status": "fail", "message": "User not found"})
+def load_draft():
+    data = request.get_json()
+    username = data["username"]
+    draft_id = data["draftId"]
+    
+    draft = db.drafts.find_one({"_id": ObjectId(draft_id)})
+    if not draft:
+        return jsonify({"status": "fail", "message": "Draft not found"})
+        
+    return jsonify({
+        "status": "success",
+        "editorState": draft["editorState"],
+        "flowSlice": draft["flowSlice"],
+        "editorSlice": draft["editorSlice"],
+        "introSlice": draft["introSlice"]
+    })
+
+@app.route("/drafts", methods=["GET"])
+def get_drafts():
+    username = request.args.get("username")
+    if not username:
+        return jsonify({"status": "fail", "message": "Username required"}), 400
+        
+    drafts = list(db.drafts.find(
+        {"username": username},
+        {"title": 1, "created_at": 1, "updated_at": 1}
+    ).sort("updated_at", -1))
+    
+    return jsonify({
+        "status": "success",
+        "drafts": [{
+            "id": str(d["_id"]),
+            "title": d["title"],
+            "created_at": d["created_at"].isoformat(),
+            "updated_at": d["updated_at"].isoformat()
+        } for d in drafts]
+    })
 
 @app.route("/saveDraft", methods=["POST"])
-def saveDraft():
-    if request.method == "POST":
-        response = request.get_json()
-        username = response["username"]
-        sessionId = response["sessionId"]
-        draft = response["draft"]
-        depGraph = response["depGraph"]
-        editorState = response["editorState"]
-        flowSlice = response["flowSlice"]
-        editorSlice = response["editorSlice"]
-        introSlice = response["introSlice"]
-        condition = response["condition"]
-        # depGraph = json.loads(response["depGraph"])
-
-        db.drafts.replace_one({"username": username, "sessionId": sessionId}, {
-                              "username": username, "sessionId": sessionId, "draft": draft, "condition": condition, "depGraph": depGraph, "editorState": editorState, "flowSlice": flowSlice, "editorSlice": editorSlice, "introSlice": introSlice}, upsert=True)
-
-        db.users.update_one({"username": username}, { "$set": { "latestSessionId" : sessionId  }})
-
-        return jsonify({"status": "success", "message": "Draft saved successfully"})
-
+def save_draft():
+    data = request.get_json()
+    username = data["username"]
+    draft_id = data.get("draftId")
+    
+    draft_data = {
+        "username": username,
+        "title": data["title"],
+        "draft": data["draft"],
+        "depGraph": data["depGraph"],
+        "editorState": data["editorState"],
+        "flowSlice": data["flowSlice"],
+        "editorSlice": data["editorSlice"],
+        "introSlice": data["introSlice"],
+        "condition": data["condition"],
+        "updated_at": datetime.now()
+    }
+    
+    try:
+        if draft_id:  # Update existing draft
+            result = db.drafts.update_one(
+                {"_id": ObjectId(draft_id)},
+                {"$set": draft_data}
+            )
+            if result.modified_count == 0:
+                return jsonify({"status": "fail", "message": "Draft not found"})
+        else:  # Create new draft
+            draft_data["created_at"] = datetime.now()
+            db.drafts.insert_one(draft_data)
+            
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "fail", "message": str(e)})
 
 def implementSupportingArgument(supportingArgument, argumentSupported):
 
@@ -781,9 +919,7 @@ def gpt_rewrite():
             candidates = [response.choices[i].message.content.strip().replace("\n", "")
                           for i in range(min(8, len(response.choices)))]
 
-            candidates = [
-                c.split(":")[1] if ":" in c else c for c in candidates]
-
+            candidates = [c.split(":")[1] if ":" in c else c for c in candidates]
             res["candidates"] = candidates
 
         print("fix res:", res["candidates"])
@@ -1062,10 +1198,13 @@ def generateText():
 
                         generation = implementCounterArgument(
                             depGraph[keywordNode]["prompt"], depGraph[node]["prompt"], parent["text"])
+    
+                        
                     elif depGraph[node]["type"] == "elaboratedBy":
                         # generate elaboration of the parent node
                         generation = implementElaboration(
                             prompt, parent["text"])
+                    
                     elif depGraph[node]["type"] == "featuredBy":
                         # generate the starting sentence for the paragraph that this keyword is featured in
                         keyword = depGraph[node]["prompt"]
@@ -1181,7 +1320,184 @@ Please synthesize these key points into a cohesive thesis statement.'''}
         response = {"response": res}
         return jsonify(response)
 
+@app.route("/user/<user_id>", methods=["GET", "PUT"])
+def user_profile(user_id):
+    if request.method == "GET":
+        try:
+            user = db.users.find_one({"_id": ObjectId(user_id)})
+            if not user:
+                return jsonify({"status": "fail", "message": "User not found"}), 404
 
+            user_data = {
+                "username": user["username"],
+                "full_name": user.get("full_name", ""),
+                "role": user["role"],
+                "students": []
+            }
+
+            if user["role"] == "teacher":
+                # Get students for teacher
+                students = list(db.users.find({"teacher_id": ObjectId(user_id)}))
+                user_data["students"] = [{
+                    "id": str(student["_id"]),
+                    "username": student["username"]
+                } for student in students]
+
+            return jsonify({
+                "status": "success",
+                "user": user_data
+            })
+        except Exception as e:
+            print(f"Error in user_profile: {str(e)}")
+            return jsonify({"status": "fail", "message": str(e)}), 500
+    elif request.method == "PUT":
+        try:
+            data = request.get_json()
+            full_name = data.get("full_name")
+            
+            result = db.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$set": {"full_name": full_name}}
+            )
+            
+            if result.modified_count > 0:
+                return jsonify({
+                    "status": "success",
+                    "message": "Profile updated successfully"
+                })
+            return jsonify({"status": "fail", "message": "No changes made"}), 400
+            
+        except Exception as e:
+            print(f"Error updating user profile: {str(e)}")
+            return jsonify({"status": "fail", "message": str(e)}), 500
+
+@app.route("/teacher/<teacher_id>/students", methods=["POST"])
+def add_student(teacher_id):
+    data = request.get_json()
+    student = db.users.find_one({"username": data["username"], "role": "student"})
+    if not student:
+        return jsonify({"status": "fail", "message": "Student not found"}), 404
+    result = db.users.update_one(
+        {"_id": student["_id"]},
+        {"$set": {"teacher_id": ObjectId(teacher_id)}}
+    )
+    if result.modified_count > 0:
+        return jsonify({
+            "status": "success",
+            "student": {
+                "id": str(student["_id"]),
+                "username": student["username"]
+            }
+        })
+    return jsonify({"status": "fail", "message": "Failed to add student"})
+
+@app.route("/teacher/<teacher_id>/students/<student_id>", methods=["DELETE"])
+def remove_student(teacher_id, student_id):
+    result = db.users.update_one(
+        {"_id": ObjectId(student_id), "teacher_id": ObjectId(teacher_id)},
+        {"$unset": {"teacher_id": ""}}
+    )
+    if result.modified_count > 0:
+        return jsonify({"status": "success"})
+    return jsonify({"status": "fail", "message": "Failed to remove student"})
+
+@app.route("/teacher/classes", methods=["POST"])
+def create_class():
+    data = request.get_json()
+    teacher_id = data.get("teacher_id")
+    class_name = data.get("class_name")
+    class_number = data.get("class_number")
+    
+    if not all([teacher_id, class_name, class_number]):
+        return jsonify({"status": "fail", "message": "Missing required fields"}), 400
+        
+    # Check if class number already exists
+    existing_class = db.classes.find_one({"class_number": class_number})
+    if existing_class:
+        return jsonify({"status": "fail", "message": "Class number already exists"}), 400
+    
+    class_id = ObjectId()
+    new_class = {
+        "_id": class_id,
+        "teacher_id": ObjectId(teacher_id),
+        "name": class_name,
+        "class_number": class_number,
+        "created_at": datetime.now()
+    }
+    
+    try:
+        db.classes.insert_one(new_class)
+        return jsonify({
+            "status": "success",
+            "class": {
+                "id": str(class_id),
+                "name": class_name,
+                "class_number": class_number
+            }
+        })
+    except Exception as e:
+        return jsonify({"status": "fail", "message": str(e)}), 500
+
+@app.route("/teacher/classes/<class_id>", methods=["DELETE"])
+def delete_class(class_id):
+    try:
+        result = db.classes.delete_one({"_id": ObjectId(class_id)})
+        if result.deleted_count > 0:
+            return jsonify({"status": "success"})
+        return jsonify({"status": "fail", "message": "Class not found"}), 404
+    except Exception as e:
+        return jsonify({"status": "fail", "message": str(e)}), 500
+
+@app.route("/teacher/<teacher_id>/classes", methods=["GET"])
+def get_teacher_classes(teacher_id):
+    try:
+        classes = list(db.classes.find({"teacher_id": ObjectId(teacher_id)}))
+        return jsonify({
+            "status": "success",
+            "classes": [{
+                "id": str(c["_id"]),
+                "name": c["name"],
+                "class_number": c["class_number"]
+            } for c in classes]
+        })
+    except Exception as e:
+        return jsonify({"status": "fail", "message": str(e)}), 500
+
+@app.route("/check_username", methods=["POST"])
+def check_username():
+    data = request.get_json()
+    username = data.get("username")
+    if not username:
+        return jsonify({"status": "fail", "message": "No username provided"}), 400
+        
+    user = db.users.find_one({"username": username})
+    return jsonify({
+        "status": "success",
+        "exists": user is not None
+    })
+
+@app.route("/deleteDraft", methods=["POST"])
+def delete_draft():
+    if request.method == "POST":
+        data = request.get_json()
+        draft_id = data.get("draftId")
+        username = data.get("username")
+        
+        if not all([draft_id, username]):
+            return jsonify({"status": "fail", "message": "Missing required fields"}), 400
+            
+        try:
+            result = db.drafts.delete_one({
+                "_id": ObjectId(draft_id),
+                "username": username
+            })
+            
+            if result.deleted_count > 0:
+                return jsonify({"status": "success"})
+            return jsonify({"status": "fail", "message": "Draft not found"}), 404
+            
+        except Exception as e:
+            return jsonify({"status": "fail", "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host="127.0.0.1")

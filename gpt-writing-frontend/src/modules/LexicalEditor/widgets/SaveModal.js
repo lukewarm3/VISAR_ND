@@ -7,16 +7,12 @@ import { setSaveModalClose } from '../slices/EditorSlice'
 import {
   Box,
   Typography,
-  Avatar,
   Stack,
-  Grid,
-  IconButton,
-  Tooltip,
-  TextField,
-  Button,
 } from '@mui/material'
-import { $createHighlightDepNode } from '../nodes/HighlightDepNode'
-import saveIcon from '../images/icons/success_icon.svg'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+
+const ndBlue = '#0C2340'
+const ndGold = '#C99700'
 
 const modalStyle = {
   position: 'absolute',
@@ -26,57 +22,53 @@ const modalStyle = {
   width: '25vw',
   height: '15vh',
   bgcolor: 'background.paper',
-  border: '2px solid #000',
+  border: `2px solid ${ndBlue}`,
   padding: 10,
   boxShadow: 24,
   pt: 2,
   px: 4,
-  pb: 3
+  pb: 3,
+  borderRadius: 1
 }
 
-export default function SaveModal () {
+export default function SaveModal ({ message }) {
   const [editor] = useLexicalComposerContext()
   const dispatch = useDispatch()
   const modalOpen = useSelector(state => state.editor.saveModalOpen)
+
+  const handleClose = () => {
+    dispatch(setSaveModalClose())
+  }
 
   return (
     <div>
       <Modal
         open={modalOpen}
-        onClose={() => {
-          dispatch(setSaveModalClose())
-        }}
+        onClose={handleClose}
         aria-labelledby='modal-modal-title'
         aria-describedby='modal-modal-description'
       >
         <Box sx={modalStyle}>
           <Stack direction="column" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Box
-              sx={{
-                width: 30,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2
+            <Typography 
+              variant='h6' 
+              sx={{ 
+                color: ndBlue,
+                fontFamily: 'system-ui',
+                mb: 2,
+                textAlign: 'center'
               }}
             >
-              <img
-                style={{ maxWidth: '100%', maxHeight: '100%' }}
-                src={saveIcon}
-              ></img>
-            </Box>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2
+              {message || 'Your draft has been saved successfully!'}
+            </Typography>
+            <CheckCircleIcon 
+              sx={{ 
+                color: ndGold,
+                fontSize: 40,
+                cursor: 'pointer'
               }}
-            >
-              <Typography variant='h6'>
-                Your draft has been saved successfully!
-              </Typography>
-            </Box>
+              onClick={handleClose}
+            />
           </Stack>
         </Box>
       </Modal>

@@ -66,7 +66,18 @@ import {
   extendFlowEditorNodeMapping,
   setFlowSliceStates,
 } from "../slices/FlowSlice";
-import { setIntroSliceStates } from "../slices/IntroSlice";
+import { setIntroSliceStates, replayTutorial } from "../slices/IntroSlice";
+import { IconButton, Menu, MenuItem } from '@mui/material';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import { useNavigate, useLocation } from 'react-router-dom';
+import HelpIcon from '@mui/icons-material/Help';
+import LogoutIcon from '@mui/icons-material/Logout';
+import AccountSettingsModal from '../../../components/AccountSettingsModal';
+import DraftSelectionModal from '../widgets/DraftSelectionModal';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select } from '@mui/material';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import SaveIcon from '@mui/icons-material/Save';
 
 const LowPriority = 1;
 
@@ -94,6 +105,9 @@ const blockTypeToBlockName = {
   quote: "Quote",
   ul: "Bulleted List",
 };
+
+const ndBlue = '#0C2340';
+const ndGold = '#C99700';
 
 function Divider() {
   return <div className="divider" />;
@@ -253,7 +267,7 @@ function FloatingLinkEditor({ editor }) {
   );
 }
 
-function Select({ onChange, className, options, value }) {
+function CodeLanguageSelect({ onChange, className, options, value }) {
   return (
     <select className={className} onChange={onChange} value={value}>
       <option hidden={true} value="" />
@@ -467,9 +481,44 @@ export default function ToolbarPlugin() {
   const dispatch = useDispatch();
   const mindMapOpen = useSelector((state) => state.editor.mindmapOpen);
   const username = useSelector((state) => state.editor.username);
+  const location = useLocation();
   const sessionId = useSelector((state) => state.editor.sessionId);
   const dependencyGraph = useSelector((state) => state.flow.dependencyGraph);
   const nodeMapping = useSelector((state) => state.flow.flowEditorNodeMapping);
+
+  const navigate = useNavigate();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  const isTeacher = location.state?.role === 'teacher';
+  const userId = isTeacher ? location.state?.teacherId : location.state?.userId;
+
+  console.log("isTeacher :", isTeacher)
+
+  const handleMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    navigate('/');
+  };
+
+  const handleGoToDashboard = () => {
+    navigate('/teacher', { 
+      state: { 
+        teacherId: location.state.teacherId,
+        role: location.state.role,
+        username: location.state.username 
+      } 
+    });
+  };
+
+  const handleReplayTutorial = () => {
+    dispatch(replayTutorial());
+  };
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -629,304 +678,657 @@ export default function ToolbarPlugin() {
     editor.dispatchCommand(GEN_TEXT_COMMAND, null);
   }, [editor, isPredicting]);
 
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
+
+  const handleSave = async (editor) => {
+    editor.update(() => {
+      const root = $getRoot();
+      const editorState = editor.getEditorState().toJSON();
+      const flowSlice = store.getState().flow;
+      const editorSlice = store.getState().editor;
+      const introSlice = store.getState().intro;
+
+      if (!username || !sessionId) {
+        console.error('Missing required session data', {
+          username,
+          sessionId
+        });
+        return;
+      }
+
+      fetch("http://127.0.0.1:5000/saveDraft", {
+        method: "POST",
+        mode: "cors",
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          sessionId,
+          draft: root.getTextContent(),
+          depGraph: JSON.stringify(dependencyGraph),
+          editorState: JSON.stringify(editorState),
+          flowSlice: JSON.stringify(flowSlice),
+          editorSlice: JSON.stringify(editorSlice),
+          introSlice: JSON.stringify({...introSlice, introInstance: null}),
+          condition: condition,
+        }),
+      })
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.status === "success") {
+          dispatch(setSaveModalOpen());
+        } else {
+          console.error('Save failed:', res.message);
+        }
+      })
+      .catch(err => {
+        console.error('Save error:', err);
+      });
+    });
+  };
+
+  const [drafts, setDrafts] = useState([]);
+  const [draftSelectionOpen, setDraftSelectionOpen] = useState(false);
+  const [saveDraftOpen, setSaveDraftOpen] = useState(false);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [saveOption, setSaveOption] = useState("new");
+
+  const loadDraftsData = useCallback(() => {
+    return fetch(`http://127.0.0.1:5000/drafts?username=${username}`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === "success") {
+          setDrafts(res.drafts);
+          setDraftSelectionOpen(true);
+          return res.drafts;
+        }
+        return [];
+      });
+  }, [username]);
+
+  const handleDraftSelect = useCallback((draftId) => {
+    fetch("http://127.0.0.1:5000/loadDraft", {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        username,
+        draftId
+      }),
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.status === "success") {
+        try {
+          // Parse the stored data first
+          const editorState = JSON.parse(res.editorState);
+          const flowSlice = JSON.parse(res.flowSlice || '{}');
+          const editorSlice = JSON.parse(res.editorSlice || '{}');
+          const introSlice = JSON.parse(res.introSlice || '{}');
+          
+          // Properly update editor state
+          editor.update(() => {
+            const parsedState = editor.parseEditorState(editorState);
+            editor.setEditorState(parsedState);
+          });
+          
+          // Update Redux store slices
+          dispatch(setFlowSliceStates({
+            nodes: flowSlice.nodes || [],
+            edges: flowSlice.edges || [],
+            flowEditorNodeMapping: flowSlice.flowEditorNodeMapping || {},
+            ...flowSlice
+          }));
+          
+          dispatch(setEditorSliceStates({
+            selectedCounterArguments: editorSlice.selectedCounterArguments || [],
+            alternativeArguments: editorSlice.alternativeArguments || [],
+            ...editorSlice
+          }));
+          
+          dispatch(setIntroSliceStates({
+            ...introSlice
+          }));
+
+          setDraftSelectionOpen(false);
+        } catch (error) {
+          console.error('Error parsing draft data:', error);
+        }
+      }
+    });
+  }, [editor, username, dispatch]);
+
+  const handleSaveDraft = useCallback(() => {
+    if (saveOption === "new" && !draftTitle.trim()) return;
+    
+    editor.update(() => {
+      const editorState = editor.getEditorState();
+      const flowState = store.getState().flow;
+      const editorSliceState = store.getState().editor;
+      const introState = store.getState().intro;
+
+      const cleanIntroState = {
+        ...introState,
+        introInstance: null,
+        steps: introState.steps ? introState.steps.map(step => ({
+          ...step,
+          element: undefined
+        })) : []
+      };
+
+      const cleanEditorState = {
+        ...editorSliceState,
+        saveModalOpen: false,
+        flowModalOpen: false
+      };
+
+      const cleanFlowState = {
+        nodes: flowState.nodes || [],
+        edges: flowState.edges || [],
+        flowEditorNodeMapping: flowState.flowEditorNodeMapping || {},
+        depGraph: flowState.depGraph || {}
+      };
+
+      const saveData = {
+        username,
+        draftId: saveOption === "new" ? null : saveOption,
+        title: saveOption === "new" ? draftTitle : drafts.find(d => d.id === saveOption)?.title,
+        draft: JSON.stringify(editorState),
+        depGraph: JSON.stringify(cleanFlowState.depGraph),
+        editorState: JSON.stringify(editorState),
+        flowSlice: JSON.stringify(cleanFlowState),
+        editorSlice: JSON.stringify(cleanEditorState),
+        introSlice: JSON.stringify(cleanIntroState),
+        condition: "experimental"
+      };
+      
+      fetch("http://127.0.0.1:5000/saveDraft", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        },
+        body: JSON.stringify(saveData)
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === "success") {
+          dispatch(setSaveModalOpen({ message: 'Draft saved successfully!' }));
+        }
+      });
+    });
+    setDraftTitle('');
+    setSaveDraftOpen(false);
+    setDraftTitle('');
+    setSaveOption("new");
+  }, [editor, draftTitle, saveOption, username, dispatch, drafts]);
+
+  const handleDeleteDraft = useCallback((draftId) => {
+    fetch("http://127.0.0.1:5000/deleteDraft", {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        username,
+        draftId
+      }),
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.status === "success") {
+        setDrafts(drafts.filter(d => d.id !== draftId));
+        setDraftSelectionOpen(false);
+        dispatch(setSaveModalOpen('Draft deleted successfully!'));
+      }
+    });
+  }, [username, drafts, dispatch]);
+
+  useEffect(() => {
+    const loadInitialDrafts = async () => {
+      if (username) {
+        try {
+          const res = await fetch(`http://127.0.0.1:5000/drafts?username=${username}`);
+          const data = await res.json();
+          if (data.status === "success") {
+            setDrafts(data.drafts);
+          }
+        } catch (error) {
+          console.error('Error loading initial drafts:', error);
+        }
+      }
+    };
+
+    loadInitialDrafts();
+  }, [username]);
+
   return (
     <div className="toolbar-wrapper" ref={toolbarRef}>
       <div className="toolbar">
-        <button
-          disabled={!canUndo}
-          onClick={() => {
-            editor.dispatchCommand(UNDO_COMMAND);
-          }}
-          className="toolbar-item spaced"
-          aria-label="Undo"
-        >
-          <i className="format undo" />
-        </button>
-        <button
-          disabled={!canRedo}
-          onClick={() => {
-            editor.dispatchCommand(REDO_COMMAND);
-          }}
-          className="toolbar-item"
-          aria-label="Redo"
-        >
-          <i className="format redo" />
-        </button>
+        <Tooltip title="Undo">
+          <button
+            disabled={!canUndo}
+            onClick={() => {
+              editor.dispatchCommand(UNDO_COMMAND);
+            }}
+            className="toolbar-item spaced"
+            aria-label="Undo"
+          >
+            <i className="format undo" />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Redo">
+          <button
+            disabled={!canRedo}
+            onClick={() => {
+              editor.dispatchCommand(REDO_COMMAND);
+            }}
+            className="toolbar-item"
+            aria-label="Redo"
+          >
+            <i className="format redo" />
+          </button>
+        </Tooltip>
+        
         <Divider />
-        {supportedBlockTypes.has(blockType) && (
-          <>
-            <button
-              className="toolbar-item block-controls"
-              onClick={() =>
-                setShowBlockOptionsDropDown(!showBlockOptionsDropDown)
-              }
-              aria-label="Formatting Options"
-            >
-              <span className={"icon block-type " + blockType} />
-              <span className="text">{blockTypeToBlockName[blockType]}</span>
-              <i className="chevron-down" />
-            </button>
-            {showBlockOptionsDropDown &&
-              createPortal(
-                <BlockOptionsDropdownList
-                  editor={editor}
-                  blockType={blockType}
-                  toolbarRef={toolbarRef}
-                  setShowBlockOptionsDropDown={setShowBlockOptionsDropDown}
-                />,
-                document.body
-              )}
-            <Divider />
-          </>
-        )}
-        {blockType === "code" ? (
-          <>
-            <Select
-              className="toolbar-item code-language"
-              onChange={onCodeLanguageSelect}
-              options={codeLanguges}
-              value={codeLanguage}
-            />
-            <i className="chevron-down inside" />
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => {
-                editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
-              }}
-              className={"toolbar-item spaced " + (isBold ? "active" : "")}
-              aria-label="Format Bold"
-            >
-              <i className="format bold" />
-            </button>
-            <button
-              onClick={() => {
-                editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
-              }}
-              className={"toolbar-item spaced " + (isItalic ? "active" : "")}
-              aria-label="Format Italics"
-            >
-              <i className="format italic" />
-            </button>
-            <button
-              onClick={() => {
-                editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
-              }}
-              className={"toolbar-item spaced " + (isUnderline ? "active" : "")}
-              aria-label="Format Underline"
-            >
-              <i className="format underline" />
-            </button>
-            <button
-              onClick={() => {
-                editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough");
-              }}
-              className={
-                "toolbar-item spaced " + (isStrikethrough ? "active" : "")
-              }
-              aria-label="Format Strikethrough"
-            >
-              <i className="format strikethrough" />
-            </button>
-            <button
-              onClick={() => {
-                editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code");
-              }}
-              className={"toolbar-item spaced " + (isCode ? "active" : "")}
-              aria-label="Insert Code"
-            >
-              <i className="format code" />
-            </button>
-            <button
-              onClick={insertLink}
-              className={"toolbar-item spaced " + (isLink ? "active" : "")}
-              aria-label="Insert Link"
-            >
-              <i className="format link" />
-            </button>
-            {isLink &&
-              createPortal(
-                <FloatingLinkEditor editor={editor} />,
-                document.body
-              )}
-            <Divider />
-            <button
-              onClick={() => {
-                editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "left");
-              }}
-              className="toolbar-item spaced"
-              aria-label="Left Align"
-            >
-              <i className="format left-align" />
-            </button>
-            <button
-              onClick={() => {
-                editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "center");
-              }}
-              className="toolbar-item spaced"
-              aria-label="Center Align"
-            >
-              <i className="format center-align" />
-            </button>
-            <button
-              onClick={() => {
-                editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "right");
-              }}
-              className="toolbar-item spaced"
-              aria-label="Right Align"
-            >
-              <i className="format right-align" />
-            </button>
-            <button
-              onClick={() => {
-                editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "justify");
-              }}
-              className="toolbar-item"
-              aria-label="Justify Align"
-            >
-              <i className="format justify-align" />
-            </button>
-            <Divider />
-            {/* <button
-              className="toolbar-item"
-              aria-label="Load Draft"
-              onClick={() => {
-                editor.update(() => {
-                  const res = fetch("http://127.0.0.1:5000/loadDraft", {
-                    method: "POST",
-                    mode: "cors",
-                    headers: {
-                      "Access-Control-Allow-Origin": "*",
-                      "Content-Type": "application/json",
-                      Accept: "application/json",
-                    },
-                    body: JSON.stringify({
-                      username: username,
-                    }),
-                  })
-                    .then((res) => res.json())
-                    .then((res) => {
-                      if (res.status === "success") {
-                        const editorState = JSON.parse(res["editorState"]);
-                        const flowSlice = JSON.parse(res["flowSlice"]);
-                        const editorSlice = JSON.parse(res["editorSlice"]);
-                        const introSlice = JSON.parse(res["introSlice"]);
-
-                        console.log("[load state] editorState: ", editorState);
-
-                        console.log("[load state flowSlice", flowSlice);
-                        dispatch(setEditorSliceStates(editorSlice));
-                        dispatch(setFlowSliceStates(flowSlice));
-                        dispatch(setIntroSliceStates(introSlice));
-
-                        editor.update(() => {
-                          // const initEditorStateWithKey =
-                          //   parseEditorStateWithKeys(editor, editorState);
-                          const initEditorState =
-                            editor.parseEditorState(editorState);
-                          console.log(
-                            "[load state] initEditorState's node map: ",
-                            initEditorState._nodeMap
-                          );
-                          const newNodeMapping =
-                            assignNewEditorNodeKeyToMapping(
-                              initEditorState._nodeMap,
-                              dependencyGraph,
-                              nodeMapping
-                            );
-                          dispatch(extendFlowEditorNodeMapping(newNodeMapping));
-                          editor.setEditorState(initEditorState);
-                        });
-                      }
-                    });
-                });
-              }}
-            >
-              <i className="format sync" />
-            </button> */}
-            <button
-              id="save"
-              className="toolbar-item"
-              aria-label="Save Draft"
-              onClick={() => {
-                // editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'justify')
-                editor.update(() => {
-                  const root = $getRoot();
-                  // const editorStateWithKeys = getEditorStateWithKeys(
-                  //   editor,
-                  //   editor.getEditorState()
-                  // );
-                  const editorState = editor.getEditorState().toJSON();
-
-                  const flowSlice = store.getState().flow;
-                  const editorSlice = store.getState().editor;
-                  const introSlice = store.getState().intro;
-
-                  console.log("store: ", store.getState());
-                  console.log("flowSlice: ", flowSlice);
-                  console.log("editorSlice: ", editorSlice);
-                  console.log("introSlice ", introSlice)
-
-                  const res = fetch("http://127.0.0.1:5000/saveDraft", {
-                    method: "POST",
-                    mode: "cors",
-                    headers: {
-                      "Access-Control-Allow-Origin": "*",
-                      "Content-Type": "application/json",
-                      Accept: "application/json",
-                    },
-                    body: JSON.stringify({
-                      username: username,
-                      sessionId: sessionId,
-                      draft: root.getTextContent(),
-                      depGraph: JSON.stringify(dependencyGraph),
-                      editorState: JSON.stringify(editorState),
-                      flowSlice: JSON.stringify(flowSlice),
-                      editorSlice: JSON.stringify(editorSlice),
-                      introSlice: JSON.stringify({...introSlice, introInstance: null}),
-                      condition: condition,
-                    }),
-                  })
-                    .then((res) => res.json())
-                    .then((res) => {
-                      if (res.status === "success") {
-                        dispatch(setSaveModalOpen());
-                      }
-                    });
-                });
-              }}
-            >
-              <i className="format save" />
-            </button>
-          </>
-        )}
+        
+        <Tooltip title="Text Format">
+          <button
+            className="toolbar-item block-controls"
+            onClick={() => setShowBlockOptionsDropDown(!showBlockOptionsDropDown)}
+            aria-label="Formatting Options"
+          >
+            <span className={"icon block-type " + blockType} />
+            <span className="text">{blockTypeToBlockName[blockType]}</span>
+            <i className="chevron-down" />
+          </button>
+        </Tooltip>
+        {showBlockOptionsDropDown &&
+          createPortal(
+            <BlockOptionsDropdownList
+              editor={editor}
+              blockType={blockType}
+              toolbarRef={toolbarRef}
+              setShowBlockOptionsDropDown={setShowBlockOptionsDropDown}
+            />,
+            document.body
+          )}
+        
+        <Divider />
+        
+        <Tooltip title="Bold">
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
+            }}
+            className={"toolbar-item spaced " + (isBold ? "active" : "")}
+            aria-label="Format Bold"
+          >
+            <i className="format bold" />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Italic">
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
+            }}
+            className={"toolbar-item spaced " + (isItalic ? "active" : "")}
+            aria-label="Format Italics"
+          >
+            <i className="format italic" />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Underline">
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
+            }}
+            className={"toolbar-item spaced " + (isUnderline ? "active" : "")}
+            aria-label="Format Underline"
+          >
+            <i className="format underline" />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Strikethrough">
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough");
+            }}
+            className={"toolbar-item spaced " + (isStrikethrough ? "active" : "")}
+            aria-label="Format Strikethrough"
+          >
+            <i className="format strikethrough" />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Code">
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code");
+            }}
+            className={"toolbar-item spaced " + (isCode ? "active" : "")}
+            aria-label="Insert Code"
+          >
+            <i className="format code" />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Insert Link">
+          <button
+            onClick={insertLink}
+            className={"toolbar-item spaced " + (isLink ? "active" : "")}
+            aria-label="Insert Link"
+          >
+            <i className="format link" />
+          </button>
+        </Tooltip>
+        
+        <Divider />
+        
+        <Tooltip title="Left Align">
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "left");
+            }}
+            className="toolbar-item spaced"
+            aria-label="Left Align"
+          >
+            <i className="format left-align" />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Center Align">
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "center");
+            }}
+            className="toolbar-item spaced"
+            aria-label="Center Align"
+          >
+            <i className="format center-align" />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Right Align">
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "right");
+            }}
+            className="toolbar-item spaced"
+            aria-label="Right Align"
+          >
+            <i className="format right-align" />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Justify">
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "justify");
+            }}
+            className="toolbar-item"
+            aria-label="Justify Align"
+          >
+            <i className="format justify-align" />
+          </button>
+        </Tooltip>
+        
+        <Divider />
+        
+        <Tooltip title="Load Draft">
+          <button
+            className="toolbar-item"
+            aria-label="Load Draft"
+            onClick={loadDraftsData}
+          >
+            <FolderOpenIcon sx={{ color: 'white', width: 20, height: 20 }} />
+          </button>
+        </Tooltip>
+        
+        <Tooltip title="Save Draft">
+          <button
+            className="toolbar-item"
+            aria-label="Save Draft"
+            onClick={() => setSaveDraftOpen(true)}
+          >
+            <SaveIcon id="save" sx={{ color: 'white', width: 20, height: 20 }} />
+          </button>
+        </Tooltip>
       </div>
-      {condition === "advanced" && (
+      <div style={{ display: 'flex', alignItems: 'center' }}>
         <div className="toolbar-right">
           {!mindMapOpen ? (
             <Tooltip title="Show mindmap" placement="top">
-              <Button
+              <IconButton
                 className="toolbar-item"
-                style={{ color: "#8a817c" }}
+                sx={{ 
+                  ml: 1,
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: ndGold,
+                    color: ndBlue
+                  }
+                }}
                 onClick={() => dispatch(setMindmapOpen())}
               >
                 <ArrowCircleLeftOutlinedIcon />
-              </Button>
+              </IconButton>
             </Tooltip>
           ) : (
             <Tooltip title="Hide mindmap" placement="top">
-              <Button
+              <IconButton
                 className="toolbar-item"
-                style={{ color: "#8a817c" }}
+                sx={{ 
+                  ml: 1,
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: ndGold,
+                    color: ndBlue
+                  }
+                }}
                 onClick={() => dispatch(setMindmapClose())}
               >
                 <ArrowCircleRightOutlinedIcon />
-              </Button>
+              </IconButton>
             </Tooltip>
           )}
         </div>
-      )}
+        {location.state?.role === 'teacher' && (
+          <Tooltip title="Go to Dashboard">
+            <IconButton 
+              onClick={handleGoToDashboard}
+              sx={{ 
+                ml: 1,
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: ndGold,
+                  color: ndBlue
+                }
+              }}
+            >
+              <DashboardIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+        <Tooltip title="Help">
+          <IconButton
+            onClick={handleReplayTutorial}
+            sx={{ 
+              ml: 1,
+              color: 'white',
+              '&:hover': {
+                backgroundColor: ndGold,
+                color: ndBlue
+              }
+            }}
+          >
+            <HelpIcon />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Account Settings">
+          <IconButton
+            onClick={() => setAccountSettingsOpen(true)}
+            sx={{ 
+              ml: 1,
+              color: 'white',
+              '&:hover': {
+                backgroundColor: ndGold,
+                color: ndBlue
+              }
+            }}
+          >
+            <AccountCircleIcon />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Logout">
+          <IconButton
+            onClick={handleLogout}
+            sx={{ 
+              ml: 1,
+              color: 'white',
+              '&:hover': {
+                backgroundColor: ndGold,
+                color: ndBlue
+              }
+            }}
+          >
+            <LogoutIcon />
+          </IconButton>
+        </Tooltip>
+        <AccountSettingsModal 
+          open={accountSettingsOpen}
+          onClose={() => setAccountSettingsOpen(false)}
+          userId={location.state?.teacherId || location.state?.userId}
+          role={location.state?.role}
+        />
+      </div>
+      <DraftSelectionModal 
+        open={draftSelectionOpen}
+        onClose={() => setDraftSelectionOpen(false)}
+        drafts={drafts}
+        onSelect={handleDraftSelect}
+        onDelete={handleDeleteDraft}
+      />
+      <Dialog 
+        open={saveDraftOpen} 
+        onClose={() => setSaveDraftOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 1,
+            '& .MuiDialogTitle-root': {
+              backgroundColor: ndBlue,
+              color: 'white'
+            }
+          }
+        }}
+      >
+        <DialogTitle>Save Draft</DialogTitle>
+        <DialogContent sx={{ mt: 3, p: 3 }}>
+          <FormControl fullWidth sx={{ mb: 2, marginTop: 1 }}>
+            <InputLabel 
+              id="save-option-label"
+              sx={{ 
+                backgroundColor: 'white',
+                px: 1,
+                paddingTop: 0,
+                color: ndBlue,
+                '&.Mui-focused': {
+                  color: ndGold
+                }
+              }}
+            >
+              Save Option
+            </InputLabel>
+            <Select
+              labelId="save-option-label"
+              value={saveOption}
+              label="Save Option"
+              onChange={(e) => setSaveOption(e.target.value)}
+              sx={{
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: ndGold,
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: ndGold,
+                },
+              }}
+            >
+              <MenuItem value="new">Save as New Draft</MenuItem>
+              {drafts.map((draft) => (
+                <MenuItem key={draft.id} value={draft.id}>
+                  Update "{draft.title}"
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {saveOption === "new" && (
+            <TextField
+              autoFocus
+              fullWidth
+              label="Draft Title"
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&.Mui-focused fieldset': {
+                    borderColor: ndGold,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: ndGold,
+                  }
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: ndGold,
+                },
+              }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button 
+            onClick={() => setSaveDraftOpen(false)}
+            variant="outlined"
+            sx={{ 
+              color: ndBlue, 
+              borderColor: ndBlue,
+              '&:hover': {
+                backgroundColor: '#ffebee',
+                borderColor: '#c62828',
+                color: '#c62828'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveDraft}
+            variant="contained"
+            sx={{ 
+              bgcolor: ndBlue,
+              '&:hover': {
+                bgcolor: ndGold
+              }
+            }}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

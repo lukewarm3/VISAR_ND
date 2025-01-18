@@ -38,6 +38,9 @@ export default function SignIn() {
   const [isSignUp, setIsSignUp] = React.useState(false)
   const [status, setStatus] = React.useState('idle')
   const [message, setMessage] = React.useState('')
+  const [signupCode, setSignupCode] = React.useState('');
+  const [fullName, setFullName] = React.useState('');
+  const [usernameError, setUsernameError] = React.useState('');
 
   const navigate = useNavigate()
 
@@ -68,87 +71,93 @@ export default function SignIn() {
     }
   }
 
-  async function authenticate(e) {
-    e.preventDefault();
-    
-    if (isSignUp && passwordError) {
-      setMessage("Please fix password errors before signing up.");
-      return;
-    }
-
-    setStatus('loading');
-    setMessage('');
-
-    const endpoint = isSignUp ? 'signup' : 'login'
+  const checkUsername = async (username) => {
+    if (!username) return;
     try {
-      const response = await fetch(`http://127.0.0.1:5000/${endpoint}`, {
+      const response = await fetch(`http://127.0.0.1:5000/check_username`, {
         method: 'POST',
-        mode: 'cors',
         headers: {
-          'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json',
-          "Accept": 'application/json'
         },
-        body: JSON.stringify({
-          username: username,
-          password: password,
-          role: role
-        })
+        body: JSON.stringify({ username })
       });
-
       const data = await response.json();
-      setStatus(data.status);
-      setMessage(data.message);
-
-      if (data.status === 'success') {
-        let editorState = null;
-        let flowSlice = null;
-        let editorSlice = null;
-        let introSlice = null;
-        if (data.preload === true) {
-          editorState = JSON.parse(data.editorState);
-          flowSlice = JSON.parse(data.flowSlice);
-          editorSlice = JSON.parse(data.editorSlice);
-          introSlice = JSON.parse(data.introSlice);
-        }
-
-        const task = {
-          topic: data.taskProblem,
-          description: data.taskDescription
-        };
-
-        const sessionId = Math.floor(Math.random() * 10000);
-
-        if (data.role === 'teacher') {
-          navigate('/teacher', {
-            // Teacher will always get the dashboard option
-            state: { teacherId: data.teacherId }
-          });
-        } else {
-          // If students, just go straight to the editor
-          navigate('/editor', {
-          state: {
-            condition: role,
-            username: username,
-            role: data.role,
-            preload: data.preload,
-            sessionId: sessionId,
-            editorState: editorState,
-            flowSlice: flowSlice,
-            editorSlice: editorSlice,
-            introSlice: introSlice,
-            taskDescription: task
-          }
-        });
-        }
-
+      if (data.exists) {
+        setUsernameError('Username already taken');
+      } else {
+        setUsernameError('');
       }
     } catch (error) {
-      console.error('Error:', error);
-      setStatus('error');
-      setMessage('An error occurred. Please try again.');
+      console.error('Error checking username:', error);
     }
+  };
+
+  async function authenticate(e) {
+  e.preventDefault();  // This line is crucial
+  
+  if (isSignUp && passwordError) {
+    setMessage("Please fix password errors before signing up.");
+    return;
   }
+
+  console.log('Testing');
+  setStatus('loading');
+  setMessage('');
+
+  const endpoint = isSignUp ? 'signup' : 'login';
+  
+  try {
+    const response = await fetch(`http://127.0.0.1:5000/${endpoint}`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+        "Accept": 'application/json'
+      },
+      body: JSON.stringify({
+        username,
+        password,
+        role,
+        full_name: fullName,
+        ...(isSignUp && role === 'student' && { signup_code: signupCode })
+      })
+    });
+
+    const data = await response.json();
+    setStatus(data.status);
+    setMessage(data.message);
+    
+    if (data.status === 'success') {
+      setStatus('success');
+      if (data.role === 'teacher') {
+        navigate('/teacher', {
+          state: { 
+            teacherId: data.userId,
+            role: data.role,
+            username: username,
+            condition: 'advanced'
+          }
+        });
+      } else {
+        navigate('/editor', {
+          state: {
+            userId: data.userId,
+            username: username,
+            sessionId: data.sessionId,
+            userType: data.role,
+            condition: 'advanced',
+            firstTimeLogin: data.firstTimeLogin
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    setStatus('error');
+    setMessage('An error occurred. Please try again.');
+  }
+}
 
   return (
     <ThemeProvider theme={theme}>
@@ -176,7 +185,7 @@ export default function SignIn() {
             }}
           >
             <Typography component='h1' variant='h4' sx={{ color: ndBlue, marginBottom: 3 }}>
-              Welcome to VISAR 👋
+              Welcome to VISAR 📝
             </Typography>
             <Box component="form" onSubmit={authenticate} noValidate sx={{ mt: 1, width: '100%' }}>
               <TextField
@@ -186,9 +195,27 @@ export default function SignIn() {
                 id='username'
                 label='Username'
                 value={username}
-                onChange={e => setUsername(e.target.value)}
+                onChange={e => {
+                  setUsername(e.target.value);
+                  if (isSignUp) {
+                    checkUsername(e.target.value);
+                  }
+                }}
+                error={!!usernameError}
+                helperText={usernameError}
                 autoFocus
               />
+              {isSignUp && (
+                <TextField
+                  margin='normal'
+                  required
+                  fullWidth
+                  id='fullName'
+                  label='Full Name'
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                />
+              )}
               <TextField
                 margin='normal'
                 required
@@ -215,12 +242,23 @@ export default function SignIn() {
                 </RadioGroup>
               </FormControl>
               )}
+              {isSignUp && role === 'student' && (
+                <TextField
+                  margin='normal'
+                  required
+                  fullWidth
+                  id='signupCode'
+                  label='Class Signup Code'
+                  value={signupCode}
+                  onChange={e => setSignupCode(e.target.value)}
+                />
+              )}
               <Button
                 type='submit'
                 fullWidth
                 variant='contained'
                 sx={{ mt: 3, mb: 2 }}
-                disabled={isSignUp && !!passwordError || status === 'loading'}
+                disabled={isSignUp && (!!passwordError || !!usernameError) || status === 'loading'}
               >
                 {isSignUp ? 'Sign Up' : 'Sign In'}
               </Button>
