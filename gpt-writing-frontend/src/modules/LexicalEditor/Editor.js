@@ -178,6 +178,7 @@ export default function Editor() {
   const [sessionStart, setSessionStart] = useState(null);
   const [activeTime, setActiveTime] = useState(0);
   const [idleTimeout, setIdleTimeout] = useState(null);
+  const helpMode = useSelector((state) => state.intro.helpMode);
 
   useEffect(() => {
     if (location.state) {
@@ -223,78 +224,51 @@ export default function Editor() {
   }, [location]);
 
   useEffect(() => {
-    // Add detailed logging for tutorial initialization
-    console.log("Tutorial initialization state:", {
-      firstTimeUser,
-      hasPreload: !!location.state?.preload,
-      hasIntroInstance: !!introInstance,
-      currentStep,
-      steps: steps?.length
-    });
-
-    // Only initialize tutorial if we're a first-time user and not preloading state
-    if (firstTimeUser && !location.state?.preload) {
-      console.log("Initializing tutorial...");
-      // Ensure any existing instance is cleaned up
-      if (introInstance) {
-        introInstance.exit();
-      }
-
+    if (firstTimeUser || helpMode) {
       if (currentStep === 0) {
         const intro = introJs.tour();
+
         intro.setOptions({
           disableInteraction: true,
           steps: steps.slice(0, 6),
-          tooltipClass: "customTooltip",
-          exitOnOverlayClick: false,
-          exitOnEsc: false,
-          showStepNumbers: true,
-          tooltipPosition: 'auto',
-          positionPrecedence: ['bottom', 'top', 'right', 'left'],
-          showProgress: true,
-          overlayOpacity: 0.8,
-          dontShowAgain: false,
-          scrollToElement: true,
-          scrollPadding: 50
+          tooltipClass: "customTooltip"
         });
 
-        intro.oncomplete(() => {
-          dispatch(disableTutorial());
-          localStorage.setItem('tutorialCompleted', 'true');
-        });
-
-        intro.onexit(() => {
-          if (currentStep !== 5) {
-            dispatch(disableTutorial());
-            localStorage.setItem('tutorialCompleted', 'true');
-          }
-        });
-
-        // Small delay to ensure DOM is ready
-        setTimeout(() => {
-          intro.start();
-          dispatch(setIntroInstance(intro));
-        }, 100);
+        intro.start();
+        dispatch(setIntroInstance(intro));
 
       } else if (currentStep === 5 && !updateModalOpen) {
-        if (introInstance) {
+        setTimeout(() => {
           dispatch(setCurrentStep(6));
           introInstance.setOptions({
             disableInteraction: true,
-            steps: steps.slice(21, 22),
+            steps: steps.slice(21, 22)
           });
+  
           introInstance.start();
-        }
+        }, 500);
+
+        introInstance.exit();
         dispatch(disableTutorial());
       }
     }
+  }, [firstTimeUser, helpMode, currentStep, updateModalOpen]);
 
-    return () => {
-      if (introInstance) {
-        introInstance.exit();
+  useEffect(() => {
+    if (location.state?.condition !== null && location.state?.condition !== undefined) {
+      dispatch(setStudyCondition(location.state.condition));
+      dispatch(setUsername(location.state.username));
+      dispatch(setSessionId(location.state.sessionId));
+      dispatch(setTaskDescription(location.state.taskDescription));
+      if (location.state.preload === true) {
+        dispatch(setEditorSliceStates(location.state.editorSlice));
+        dispatch(setFlowSliceStates(location.state.flowSlice));
+        dispatch(clearUnusedNodeAndEdge());
+        dispatch(setIntroSliceStates(location.state.introSlice));
+        setEditorState(location.state.editorState);
       }
-    };
-  }, [firstTimeUser, currentStep, updateModalOpen, location.state?.preload]);
+    }
+  }, [location.state]);
 
   // Track session start and end
   useEffect(() => {

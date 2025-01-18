@@ -5,6 +5,7 @@ const initialState = {
   firstTimeUser: true,
   currentStep: 0,
   introInstance: null,
+  helpMode: false,
   steps: [
     // 0
     {
@@ -79,7 +80,7 @@ const initialState = {
     },
     // 13
     {
-      element: ".toolbar-right",
+      element: ".mind-map",
       intro: "First, let's open the mind map by clicking on this icon.",
     },
     // 14
@@ -137,10 +138,10 @@ const introSlice = createSlice({
   initialState,
   reducers: {
     setIntroSliceStates: (state, action) => {
-      const { firstTimeUser, currentStep } = action.payload;
+      const { firstTimeUser, currentStep, helpMode } = action.payload;
 
       let introInstance = state.introInstance;
-      if (firstTimeUser && introInstance === null) {
+      if ((firstTimeUser || helpMode) && introInstance === null) {
         introInstance = introJs.tour();
       }
 
@@ -149,6 +150,7 @@ const introSlice = createSlice({
         firstTimeUser: firstTimeUser,
         currentStep: currentStep,
         introInstance: introInstance,
+        helpMode: helpMode || false,
       };
     },
     enableTutorial: (state) => {
@@ -157,6 +159,16 @@ const introSlice = createSlice({
     },
     disableTutorial: (state) => {
       state.firstTimeUser = false;
+    },
+    toggleHelpMode: (state) => {
+      state.helpMode = !state.helpMode;
+      if (state.introInstance) {
+        state.introInstance.exit();
+      }
+      state.firstTimeUser = true;
+      state.currentStep = 0;
+      state.introInstance = null;
+      localStorage.removeItem('tutorialCompleted');
     },
     setCurrentStep: (state, action) => {
       state.currentStep = action.payload;
@@ -183,6 +195,7 @@ export const {
   setCurrentStep,
   setIntroInstance,
   replayTutorial,
+  toggleHelpMode,
 } = introSlice.actions;
 
 export default introSlice.reducer;

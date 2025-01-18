@@ -66,7 +66,7 @@ import {
   extendFlowEditorNodeMapping,
   setFlowSliceStates,
 } from "../slices/FlowSlice";
-import { setIntroSliceStates, replayTutorial } from "../slices/IntroSlice";
+import { setIntroSliceStates, replayTutorial, toggleHelpMode } from "../slices/IntroSlice";
 import { IconButton, Menu, MenuItem } from '@mui/material';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -911,6 +911,8 @@ export default function ToolbarPlugin() {
     loadInitialDrafts();
   }, [username]);
 
+  const helpMode = useSelector((state) => state.intro.helpMode);
+
   return (
     <div className="toolbar-wrapper" ref={toolbarRef}>
       <div className="toolbar">
@@ -1132,7 +1134,7 @@ export default function ToolbarPlugin() {
           ) : (
             <Tooltip title="Hide mindmap" placement="top">
               <IconButton
-                className="toolbar-item"
+                className="toolbar-item mind-map"
                 sx={{ 
                   ml: 1,
                   color: 'white',
@@ -1167,21 +1169,6 @@ export default function ToolbarPlugin() {
         )}
         {!mindMapOpen && (
           <>
-            <Tooltip title="Help">
-              <IconButton
-                onClick={handleReplayTutorial}
-                sx={{ 
-                  ml: 1,
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: ndGold,
-                    color: ndBlue
-                  }
-                }}
-              >
-                <HelpIcon />
-              </IconButton>
-            </Tooltip>
             <Tooltip title="Account Settings">
               <IconButton
                 onClick={() => setAccountSettingsOpen(true)}
@@ -1195,6 +1182,21 @@ export default function ToolbarPlugin() {
                 }}
               >
                 <AccountCircleIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Help">
+              <IconButton
+                onClick={() => dispatch(toggleHelpMode())}
+                sx={{ 
+                  ml: 1,
+                  color: helpMode ? ndGold : 'white',
+                  '&:hover': {
+                    backgroundColor: ndGold,
+                    color: ndBlue
+                  }
+                }}
+              >
+                <HelpIcon />
               </IconButton>
             </Tooltip>
             <Tooltip title="Logout">

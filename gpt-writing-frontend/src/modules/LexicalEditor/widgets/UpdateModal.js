@@ -126,6 +126,7 @@ export default function UpdateModal () {
 
   // tutorial
   const firstTimeUser = useSelector((state) => state.intro.firstTimeUser);
+  const helpMode = useSelector((state) => state.intro.helpMode);
   const introInstance = useSelector((state) => state.intro.introInstance);
   const steps = useSelector((state) => state.intro.steps);
   const currentStep = useSelector((state) => state.intro.currentStep);
@@ -274,13 +275,24 @@ export default function UpdateModal () {
             setShowGeneration(false)
           }
 
-          if (firstTimeUser && introInstance && currentStep === 4) {
-            introInstance.setOptions({
-              disableInteraction: true,
-              steps: steps.slice(19, 20),
-            });
+          if ((firstTimeUser || helpMode) && introInstance) {
+            if (currentStep === 3) {
+              dispatch(setCurrentStep(4))
+              introInstance.setOptions({
+                disableInteraction: true,
+                steps: steps.slice(19, 20),
+              });
       
-            introInstance.start();
+              introInstance.start();
+            } else if (currentStep === 4) {
+              dispatch(setCurrentStep(5))
+              introInstance.setOptions({
+                disableInteraction: true,
+                steps: steps.slice(20, 21),
+              });
+        
+              introInstance.start();
+            } 
           }
         })
     }

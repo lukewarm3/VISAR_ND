@@ -98,7 +98,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
   };
 
   useEffect(() => {
-    if (firstTimeUser && introInstance) {
+    if (introInstance) {
       if (showSteps2) {
         introInstance.setOptions({ disableInteraction: true, steps: steps.slice(6, 7) });
 

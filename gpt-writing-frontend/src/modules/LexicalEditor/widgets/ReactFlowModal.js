@@ -31,10 +31,10 @@ export default function PromptModal() {
   const firstTimeUser = useSelector((state) => state.intro.firstTimeUser);
   const introInstance = useSelector((state) => state.intro.introInstance);
   const steps = useSelector((state) => state.intro.steps);
-
+  const helpMode = useSelector((state) => state.intro.helpMode);
   useEffect(() => {
     console.log("modalOpen is changed to " + modalOpen);
-    if (firstTimeUser && introInstance) {
+    if ((firstTimeUser || helpMode) && introInstance) {
       if (modalOpen) {
         introInstance.setOptions({ disableInteraction: true, steps: steps.slice(8, 10) });
 

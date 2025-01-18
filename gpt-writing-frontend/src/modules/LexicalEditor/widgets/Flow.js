@@ -147,6 +147,7 @@ export default function Flow({ editor, mode, sidebar }) {
 
   const mindmapOpen = useSelector((state) => state.editor.mindmapOpen);
   const firstTimeUser = useSelector((state) => state.intro.firstTimeUser);
+  const helpMode = useSelector((state) => state.intro.helpMode);
   const introInstance = useSelector((state) => state.intro.introInstance);
   const steps = useSelector((state) => state.intro.steps);
   const currentStep = useSelector((state) => state.intro.currentStep);
@@ -163,18 +164,24 @@ export default function Flow({ editor, mode, sidebar }) {
   };
 
   useEffect(() => {
-    if (firstTimeUser && introInstance && currentStep === 2 && mindmapOpen) {
-      setTimeout(() => {
-        dispatch(setCurrentStep(3));
-        introInstance.setOptions({
-          disableInteraction: true,
-          steps: steps.slice(14, 17),
-        });
-
-        introInstance.start();
-      }, 1000);
-    }
-  }, [currentStep, firstTimeUser, introInstance, steps, mindmapOpen]);
+  if ((firstTimeUser || helpMode) && introInstance && currentStep === 2 && mindmapOpen) {
+    introInstance.setOptions({
+      disableInteraction: false,
+      steps: steps.slice(14, 17),
+      exitOnOverlayClick: true,
+      exitOnEsc: true,
+      showBullets: true,
+      overlayOpacity: 0.5,
+      scrollToElement: true,
+      tooltipPosition: 'auto'
+    });
+    
+    setTimeout(() => {
+      dispatch(setCurrentStep(3));
+      introInstance.start();
+    }, 500);
+  }
+}, [currentStep, firstTimeUser, helpMode, introInstance, steps, mindmapOpen, dispatch]);
 
   const handleLazyUpdateChange = () => {
     setSwitchChecked(!switchChecked);
@@ -202,96 +209,33 @@ export default function Flow({ editor, mode, sidebar }) {
         dispatch(extendFlowEditorNodeMapping(updatedMappings));
         dispatch(extendDepGraph(updatedGraph));
 
-        if (firstTimeUser && introInstance) {
-          if (currentStep === 0) {
-            dispatch(setCurrentStep(1));
-            introInstance.setOptions({
-              disableInteraction: true,
-              steps: steps.slice(10, 11),
-            });
+        console.log("Tutorial mode is on at least: ", firstTimeUser);
 
-            introInstance.start();
-          } else if (currentStep === 1) {
-            dispatch(setCurrentStep(2));
-            introInstance.setOptions({
-              disableInteraction: true,
-              steps: steps.slice(12, 14),
-            });
+        if ((firstTimeUser || helpMode) && introInstance) {
+          console.log("currentStep is ", currentStep);
+          console.log("steps is ", steps);
+          // if (currentStep === 0) {
+          //   dispatch(setCurrentStep(1));
+          //   introInstance.setOptions({
+          //     disableInteraction: false, 
+          //     steps: steps.slice(10, 11),
+          //     exitOnOverlayClick: true,
+          //     exitOnEsc: true, 
+          //   });
 
-            introInstance.start();
-          }
+          //   introInstance.start();
+          // } else if (currentStep === 1) {
+          //   dispatch(setCurrentStep(2));
+          //   introInstance.setOptions({
+          //     disableInteraction: false,
+          //     exitOnOverlayClick: true,
+          //     exitOnEsc: true, 
+          //     steps: steps.slice(12, 14),
+          //   });
+
+          //   introInstance.start();
+          // }
         }
-
-        // const index = node.getTextContent().indexOf(curSelection)
-        // if (index !== -1) {
-        //   if (index > 0) {
-        //     const preText = node.getTextContent().slice(0, index)
-        //     const preTextNode = $createTextNode(preText)
-        //     textblockNode.append(preTextNode)
-        //     // node.replace(preTextNode)
-        //     const hlNode = $createHighlightDepNode(
-        //       'highlight-dep-elb',
-        //       curSelection
-        //     )
-        //     hlNode.setStyle('background-color: #bde0fe')
-        //     // preTextNode.insertAfter(hlNode)
-        //     textblockNode.append(hlNode)
-        //     lastNode = hlNode
-        //     if (index + curSelection.length < node.getTextContent().length) {
-        //       const postText = node
-        //         .getTextContent()
-        //         .slice(index + curSelection.length)
-        //       const postTextNode = $createTextNode(postText)
-        //       // hlNode.insertAfter(postTextNode)
-        //       textblockNode.append(postTextNode)
-        //       lastNode = postTextNode
-        //     }
-        //     node.replace(textblockNode)
-        //   } else {
-        //     const hlNode = $createHighlightDepNode(
-        //       'highlight-dep-elb',
-        //       curSelection
-        //     )
-        //     hlNode.setStyle('background-color: #bde0fe')
-        //     textblockNode.append(hlNode)
-        //     node.replace(textblockNode)
-        //     lastNode = hlNode
-        //     if (index + curSelection.length < node.getTextContent().length) {
-        //       const postText = node
-        //         .getTextContent()
-        //         .slice(index + curSelection.length)
-        //       const postTextNode = $createTextNode(postText)
-        //       // node.insertAfter(postTextNode)
-        //       textblockNode.append(postTextNode)
-        //       lastNode = postTextNode
-        //     }
-        //     const spaceNode = $createTextNode('  ')
-        //     // lastNode.insertAfter(spaceNode)
-        //     textblockNode.append(spaceNode)
-        //     const lineBreakNode1 = $createLineBreakNode()
-        //     const lineBreakNode2 = $createLineBreakNode()
-        //     textblockNode.append(lineBreakNode1)
-        //     textblockNode.append(lineBreakNode2)
-        //     // update the node mapping with the new hl node
-        //     let oldFlowKey = null
-        //     for (const [key, value] of Object.entries(nodeMappings)) {
-        //       if (value === curRangeNodeKey) {
-        //         oldFlowKey = key
-        //         break
-        //       }
-        //     }
-        //     if (oldFlowKey !== null) {
-        //       dispatch(
-        //         setFlowEditorNodeMapping({
-        //           flowKey: oldFlowKey,
-        //           EditorKey: hlNode.__key
-        //         })
-        //       )
-        //     }
-        //   }
-        // else {
-        //   console.log("cannot find the selection in the node's text content")
-        // }
       });
     });
     dispatch(setRangeGenerationMode(false));
