@@ -1,21 +1,35 @@
-services:
-  backend:
-    build:
-      context: ./gpt-writing-backend
-      dockerfile: Dockerfile
-    environment:
-      - MONGO_DB_KEY=${MONGO_DB_KEY}
-      - OPEN_AI_KEY=${OPEN_AI_KEY}
-    volumes:
-      - ./gpt-writing-backend:/app/backend-server
-    ports:
-      - 5001:5000
+version: "3.8"
 
+services:
   frontend:
     build:
       context: ./gpt-writing-frontend
       dockerfile: Dockerfile
-    volumes:
-      - ./gpt-writing-frontend:/app/frontend-server
     ports:
-      - 3000:3000
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://backend:5001
+
+  backend:
+    build:
+      context: ./gpt-writing-backend
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/visar
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:

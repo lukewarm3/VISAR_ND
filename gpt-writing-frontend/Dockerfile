@@ -1,22 +1,29 @@
-FROM node:18-alpine
+FROM node:18-alpine as builder
 
-WORKDIR /app/frontend-server
+WORKDIR /app
 
-ENV PATH /app/frontend-server/node_modules/.bin:$PATH
+# Copy package files
+COPY package*.json ./
 
-COPY . .
-
-# === Build the frontend ===
 # Install dependencies
-# RUN npm ci --legacy-peer-deps
 RUN npm install --legacy-peer-deps
 
-# # Build the app
-# RUN npm run build
+# Copy source code
+COPY . .
 
-# # === Run ===
-# ENV NODE_ENV=production
+# Build the app
+RUN npm run build
 
-# Expose port on which the server will on
-EXPOSE 3000
-CMD ["npm", "run", "start"]
+# Production stage
+FROM nginx:alpine
+
+# Copy built assets from builder stage
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Copy nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
